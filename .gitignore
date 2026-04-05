@@ -19,12 +19,8 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints/
 
-# 项目相关 - 数据集和模型
+# 项目相关 - 数据集（模型文件要上传，所以不忽略）
 datasets/
-*.pth
-*.pt
-*.pkl
-best_model.pth
 
 # 图片文件（如果需要排除原始图片）
 *.jpg
