@@ -82,6 +82,9 @@ DISEASE_NAMES_CN = {
     "Tomato___healthy": "番茄健康",
 }
 
+# 置信度阈值（低于此值视为无法识别）
+CONFIDENCE_THRESHOLD = 0.70
+
 
 def get_chinese_name(english_name):
     """将英文类别名称转换为中文"""
@@ -239,7 +242,7 @@ def overlay_heatmap(img_array, cam, alpha=0.5):
     return overlay
 
 
-# ------------------------------ 预测函数 ------------------------------ #
+# ------------------------------ 预测函数（含置信度阈值） ------------------------------ #
 def predict_with_heatmap(image):
     try:
         # 转换图片
@@ -265,7 +268,12 @@ def predict_with_heatmap(image):
         chinese_name = get_chinese_name(english_name)
         confidence_value = confidence.item()
 
-        # 生成热力图
+        # ========== 置信度阈值判断 ==========
+        if confidence_value < CONFIDENCE_THRESHOLD:
+            result_text = f"⚠️ 无法准确识别\n\n📊 最接近的匹配：{chinese_name}\n📊 置信度：{confidence_value:.2%}\n\n💡 建议：\n• 请确保图片为清晰的作物叶片\n• 请确保叶片占图片主要部分\n• 避免背景杂乱或非叶片物体"
+            return result_text, None
+
+        # ========== 置信度足够，生成热力图 ==========
         cam = generate_gradcam(img_tensor, target_class=pred_class.item())
 
         if cam is not None:
@@ -321,7 +329,7 @@ with gr.Blocks(title="植物病害智能诊断系统", theme=gr.themes.Soft()) a
                 submit_btn = gr.Button("🔍 开始诊断", variant="primary")
                 clear_btn = gr.Button("🗑️ 清空", variant="secondary")
         with gr.Column():
-            output_text = gr.Textbox(label="📋 诊断结果", lines=3)
+            output_text = gr.Textbox(label="📋 诊断结果", lines=5)
             output_heatmap = gr.Image(label="🔥 Grad-CAM 热力图对比", type="pil", height=350)
 
     submit_btn.click(fn=predict_with_heatmap, inputs=image_input, outputs=[output_text, output_heatmap])
@@ -337,6 +345,7 @@ with gr.Blocks(title="植物病害智能诊断系统", theme=gr.themes.Soft()) a
 
     ### ⚠️ 温馨提示
     - 请上传**清晰的叶片**图片，避免背景杂乱
+    - 置信度低于 70% 时，系统会提示无法识别
     - 本系统仅供辅助参考，建议咨询专业农技人员
     """)
 
