@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+*.iml
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# 项目相关 - 数据集和模型
+datasets/
+*.pth
+*.pt
+*.pkl
+best_model.pth
+
+# 图片文件（如果需要排除原始图片）
+*.jpg
+*.png
+*.jpeg
+*.bmp
+!example/*.jpg
+!example/*.png
+
+# Gradio
+.gradio/
+
+# 日志和缓存
+*.log
+*.cache
+*.out
+
+# 虚拟环境
+venv/
+.venv/
