@@ -20,12 +20,11 @@ plt.rcParams['axes.unicode_minus'] = False
 CONFIDENCE_THRESHOLD = 0.70
 
 
-# ------------------------------ 自定义模型 ------------------------------ #
+# ------------------------------ 自定义模型（与 main.py 完全一致）----------------------------- #
 class DepthwiseSeparableConv(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
-        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=stride, padding=1,
-                                   groups=in_channels, bias=False)
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=stride, padding=1, groups=in_channels, bias=False)
         self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
@@ -33,24 +32,20 @@ class DepthwiseSeparableConv(nn.Module):
         return F.relu(self.bn(self.pointwise(self.depthwise(x))))
 
 
-class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+class ECAAttention(nn.Module):
+    def __init__(self, channels, gamma=2, b=1):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(out_channels)
-        self.shortcut = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=1),
-            nn.BatchNorm2d(out_channels)
-        ) if in_channels != out_channels else nn.Identity()
+        t = int(abs((torch.log2(torch.tensor(channels)).item() + b) / gamma))
+        kernel_size = t if t % 2 else t + 1
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Conv1d(1, 1, kernel_size=kernel_size, padding=kernel_size // 2, bias=False)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        residual = self.shortcut(x)
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += residual
-        return F.relu(out)
+        y = self.avg_pool(x)
+        y = self.conv(y.squeeze(-1).transpose(-1, -2))
+        y = self.sigmoid(y.transpose(-1, -2).unsqueeze(-1))
+        return x * y.expand_as(x)
 
 
 class PlantDiseaseCNN(nn.Module):
@@ -62,11 +57,13 @@ class PlantDiseaseCNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
             DepthwiseSeparableConv(32, 64),
+            ECAAttention(64),
             nn.MaxPool2d(2),
-            ResidualBlock(64, 64),
             DepthwiseSeparableConv(64, 128),
+            ECAAttention(128),
             nn.MaxPool2d(2),
             DepthwiseSeparableConv(128, 256),
+            ECAAttention(256),
             nn.MaxPool2d(2),
         )
         self.classifier = nn.Sequential(
@@ -234,12 +231,13 @@ def predict_with_heatmap(image):
 
 
 # ------------------------------ Gradio 界面 ------------------------------ #
-with gr.Blocks(title="植物病害智能诊断系统", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="植物病害智能诊断系统 (增强版)", theme=gr.themes.Soft()) as demo:
     gr.Markdown("""
         <div style="text-align: center">
-            <h1>🌱 植物病害智能诊断系统</h1>
+            <h1>🌱 植物病害智能诊断系统 (增强版)</h1>
             <h3>上传植物叶片图片，自动识别病害类型</h3>
             <p>🔥 支持 Grad-CAM 热力图可视化，展示模型关注区域</p>
+            <p>⚡ 本版本使用完整模型（含ECA注意力机制）</p>
         </div>
     """)
 
@@ -271,4 +269,4 @@ with gr.Blocks(title="植物病害智能诊断系统", theme=gr.themes.Soft()) a
     """)
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7861)
+    demo.launch(server_name="127.0.0.1", server_port=7862)  # 使用不同端口避免冲突
