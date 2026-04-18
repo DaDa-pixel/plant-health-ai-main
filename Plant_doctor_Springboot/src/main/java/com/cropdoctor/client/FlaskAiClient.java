@@ -67,17 +67,49 @@ public class FlaskAiClient {
         try {
             String url = flaskBaseUrl + "/predict";
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            // 构建multipart请求
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            
+            // 添加图片文件
+            String inputImg = (String) params.get("inputImg");
+            if (inputImg != null && !inputImg.isEmpty()) {
+                // 从uploads目录读取文件
+                String uploadDir = System.getProperty("user.dir") + "/uploads/";
+                File imageFile = new File(uploadDir + inputImg);
+                
+                if (imageFile.exists()) {
+                    body.add("image", new FileSystemResource(imageFile));
+                    log.info("准备发送图片到Flask: {}", imageFile.getAbsolutePath());
+                } else {
+                    log.error("图片文件不存在: {}", imageFile.getAbsolutePath());
+                    JSONObject error = new JSONObject();
+                    error.put("success", false);
+                    error.put("error", "图片文件不存在");
+                    return error;
+                }
+            } else {
+                log.error("未提供图片文件名");
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("error", "未提供图片");
+                return error;
+            }
 
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+            log.info("Flask响应状态: {}", response.getStatusCode());
+            log.info("Flask响应内容: {}", response.getBody());
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 return JSON.parseObject(response.getBody());
             }
         } catch (Exception e) {
             log.error("调用Flask预测接口失败: {}", e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }

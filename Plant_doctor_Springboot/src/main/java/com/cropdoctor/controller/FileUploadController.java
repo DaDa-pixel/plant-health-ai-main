@@ -16,7 +16,6 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/files")
-@CrossOrigin(origins = "*")
 public class FileUploadController {
 
     @Value("${file.upload-path}")

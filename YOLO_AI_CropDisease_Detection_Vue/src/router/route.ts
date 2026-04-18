@@ -154,21 +154,6 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 						},
 					},
 					{
-						path: '/videoPredict',
-						name: 'videoPredict',
-						component: () => import('/@/views/videoPredict/index.vue'),
-						meta: {
-							title: '视频检测',
-							isLink: '',
-							isHide: false,
-							isKeepAlive: true,
-							isAffix: false,
-							isIframe: false,
-							roles: ['admin', 'common', 'others'],
-							icon: 'iconfontjs icon-spjc',
-						},
-					},
-					{
 						path: '/cameraPredict',
 						name: 'cameraPredict',
 						component: () => import('/@/views/cameraPredict/index.vue'),
@@ -196,21 +181,6 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 							isIframe: false,
 							roles: ['admin', 'common', 'others'],
 							icon: 'iconfontjs icon-tpjl',
-						},
-					},
-					{
-						path: '/videoRecord',
-						name: 'videoRecord',
-						component: () => import('/@/views/videoRecord/index.vue'),
-						meta: {
-							title: '视频识别记录',
-							isLink: '',
-							isHide: false,
-							isKeepAlive: true,
-							isAffix: false,
-							isIframe: false,
-							roles: ['admin', 'common', 'others'],
-							icon: 'iconfontjs icon-spjl',
 						},
 					},
 					{
@@ -355,14 +325,6 @@ export const staticRoutes: Array<RouteRecordRaw> = [
 		component: () => import('/@/views/login/register.vue'),
 		meta: {
 			title: '注册',
-		},
-	},
-	{
-		path: '/videoShow',
-		name: 'videoShow',
-		component: () => import('/@/views/videoRecord/show.vue'),
-		meta: {
-			title: '记录查看',
 		},
 	},
 	/**

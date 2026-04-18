@@ -2,37 +2,33 @@
 	<div class="system-predict-container layout-padding">
 		<div class="system-predict-padding layout-padding-auto layout-padding-view">
 			<div class="header">
-				<div class="weight">
-					<el-select v-model="kind" placeholder="请选择作物种类" size="large" style="width: 200px" @change="getData">
-						<el-option v-for="item in state.kind_items" :key="item.value" :label="item.label"
-							:value="item.value" />
-					</el-select>
-				</div>
-				<div class="weight">
-					<el-select v-model="weight" placeholder="请选择模型" size="large" style="margin-left: 20px;width: 200px">
-						<el-option v-for="item in state.weight_items" :key="item.value" :label="item.label"
-							:value="item.value" />
-					</el-select>
-				</div>
-				<div class="conf" style="margin-left: 20px;display: flex; flex-direction: row;">
-					<div
-						style="font-size: 14px;margin-right: 20px;display: flex;justify-content: start;align-items: center;color: #909399;">
-						设置最小置信度阈值</div>
+				<div class="conf" style="display: flex; flex-direction: row; align-items: center;">
+					<div style="font-size: 14px;margin-right: 20px;color: #909399;">
+						设置最小置信度阈值
+					</div>
 					<el-slider v-model="conf" :format-tooltip="formatTooltip" style="width: 300px;" />
 				</div>
-				<div class="button-section" style="margin-left: 20px">
-					<el-button type="primary" @click="upData" class="predict-button">开始预测</el-button>
+				<div class="button-section" style="margin-left: auto">
+					<el-button type="primary" @click="upData" class="predict-button" :loading="state.predictLoading">
+						开始预测
+					</el-button>
 				</div>
 			</div>
-			<!-- 图片显示区域修改 -->
-			<el-row :gutter="10" class="image-display">
+
+			<!-- 图片显示区域 -->
+			<el-row :gutter="20" class="image-display">
 				<!-- 原图展示 -->
 				<el-col :span="8">
 					<el-card shadow="hover" class="card">
 						<div class="image-title">原图片</div>
-						<el-upload v-model="state.img" ref="uploadFile" class="avatar-uploader"
-							action="http://localhost:9999/files/upload" :show-file-list="false"
-							:on-success="handleAvatarSuccessone">
+						<el-upload
+							v-model="state.img"
+							ref="uploadFile"
+							class="avatar-uploader"
+							action="/api/files/upload"
+							:show-file-list="false"
+							:on-success="handleAvatarSuccessone"
+						>
 							<el-image v-if="imageUrl" :src="imageUrl" class="preview-image" fit="contain" />
 							<div v-else class="uploader-content"> 
 								<el-icon class="upload-icon">
@@ -48,8 +44,12 @@
 				<el-col :span="8">
 					<el-card shadow="hover" class="card">
 						<div class="image-title">预测结果</div>
-						<el-image v-if="predictedImageUrl" :src="predictedImageUrl" class="preview-image"
-							fit="contain" />
+						<el-image
+							v-if="predictedImageUrl"
+							:src="predictedImageUrl"
+							class="preview-image"
+							fit="contain"
+						/>
 						<div v-else class="placeholder">
 							<el-icon>
 								<Picture />
@@ -58,12 +58,19 @@
 						</div>
 					</el-card>
 				</el-col>
+
 				<!-- 智能建议 -->
 				<el-col :span="8">
 					<el-card shadow="hover" class="card">
 						<div class="image-title">智能建议</div>
 						<div class="suggestion-content" v-if="state.aiSuggestion">
 							<div class="suggestion-text">{{ state.aiSuggestion }}</div>
+						</div>
+						<div v-else-if="state.suggestionLoading" class="placeholder">
+							<el-icon class="is-loading">
+								<Loading />
+							</el-icon>
+							<span>正在生成智能建议...</span>
 						</div>
 						<div v-else class="placeholder">
 							<el-icon>
@@ -74,6 +81,7 @@
 					</el-card>
 				</el-col>
 			</el-row>
+
 			<el-row class="result-section">
 				<el-col :span="24">
 					<el-card>
@@ -111,66 +119,24 @@
 </template>
 
 
-<script setup lang="ts" name="personal">
-import { reactive, ref, onMounted } from 'vue';
+<script setup lang="ts" name="imgPredict">
+import { reactive, ref } from 'vue';
 import type { UploadInstance, UploadProps } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import request from '/@/utils/request';
-import { Plus, ChatLineRound, Picture } from '@element-plus/icons-vue';
+import { Plus, ChatLineRound, Picture, Loading } from '@element-plus/icons-vue';
 import { useUserInfo } from '/@/stores/userInfo';
 import { storeToRefs } from 'pinia';
-import { formatDate } from '/@/utils/formatTime';
 import axios from 'axios';
 
 const imageUrl = ref('');
-const conf = ref('');
-const weight = ref('');
-const kind = ref('');
+const conf = ref(50);
 const uploadFile = ref<UploadInstance>();
 const stores = useUserInfo();
 const { userInfos } = storeToRefs(stores);
-// 新增响应式变量
 const predictedImageUrl = ref('');
+
 const state = reactive({
-	weight_items: [] as any,
-	kind_items: [
-		{
-			value: 'corn',
-			label: '玉米',
-		},
-		{
-			value: 'rice',
-			label: '水稻',
-		},
-		{
-			value: 'wheat',
-			label: '小麦',
-		},
-		{
-			value: 'potato',
-			label: '马铃薯',
-		},
-    {
-      value: 'tomato',
-      label: '番茄',
-    },
-    {
-      value: 'cotton',
-      label: '棉花',
-    },
-    {
-      value: 'apple',
-      label: '苹果',
-    },
-    {
-      value: 'grape',
-      label: '葡萄',
-    },
-    {
-      value: 'strawberry',
-      label: '草莓',
-    },
-	],
 	img: '',
 	predictionResult: {
 		label: '',
@@ -179,125 +145,124 @@ const state = reactive({
 	},
 	form: {
 		username: '',
-		inputImg: null as any,
-		weight: '',
-		conf: null as any,
-		kind: '',
-		startTime: ''
+		inputImg: '',
+		conf: 0.5,
 	},
 	aiSuggestion: '',
 	suggestionLoading: false,
+	predictLoading: false,
 });
 
 const formatTooltip = (val: number) => {
-	return val / 100
-}
+	return (val / 100).toFixed(2);
+};
 
 const handleAvatarSuccessone: UploadProps['onSuccess'] = (response, uploadFile) => {
-	imageUrl.value = URL.createObjectURL(uploadFile.raw!);
-	state.img = response.data;
+	if (response.code === 0) {
+		imageUrl.value = URL.createObjectURL(uploadFile.raw!);
+		state.img = response.data;
+		ElMessage.success('图片上传成功');
+	} else {
+		ElMessage.error('图片上传失败');
+	}
 };
-
-const getData = () => {
-	request.get('/api/flask/file_names').then((res) => {
-		if (res.code == 0) {
-			res.data = JSON.parse(res.data);
-			state.weight_items = res.data.weight_items.filter(item => item.value.includes(kind.value));
-		} else {
-			ElMessage.error(res.msg);
-		}
-	});
-};
-
 
 const upData = () => {
-	state.form.weight = weight.value;
-	state.form.conf = (parseFloat(conf.value) / 100);
+	if (!state.img) {
+		ElMessage.warning('请先上传图片');
+		return;
+	}
+
+	state.predictLoading = true;
+	state.form.conf = conf.value / 100;
 	state.form.username = userInfos.value.userName;
 	state.form.inputImg = state.img;
-	state.form.kind = kind.value;
-	state.form.startTime = formatDate(new Date(), 'YYYY-mm-dd HH:MM:SS');
-	console.log(state.form);
+
 	request.post('/api/flask/predict', state.form).then((res) => {
-		if (res.code == 0) {
-			const originalImage = imageUrl.value;
+		state.predictLoading = false;
+
+		if (res.code === 0) {
 			try {
-				res.data = JSON.parse(res.data);
+				const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
 
-				// 如果 res.data.label 是字符串，则解析为数组
-				if (typeof res.data.label === 'string') {
-					res.data.label = JSON.parse(res.data.label);
+				// 处理标签
+				if (typeof data.label === 'string') {
+					data.label = JSON.parse(data.label);
 				}
 
-				// 确保 res.data.label 是数组后再调用 map
-				if (Array.isArray(res.data.label)) {
-					state.predictionResult.label = res.data.label.map(item => item.replace(/\\u([\dA-Fa-f]{4})/g, (_, code) =>
-						String.fromCharCode(parseInt(code, 16))
-					));
-				} else {
-					console.error("res.data.label 不是数组:", res.data.label);
+				if (Array.isArray(data.label)) {
+					state.predictionResult.label = data.label.map((item: string) =>
+						item.replace(/\\u([\dA-Fa-f]{4})/g, (_, code) =>
+							String.fromCharCode(parseInt(code, 16))
+						)
+					);
 				}
-				state.predictionResult.confidence = res.data.confidence;
-				state.predictionResult.allTime = res.data.allTime;
 
-				// 覆盖原图片
-				if (res.data.outImg) {
-					// 使用服务器返回的新图片路径
-					predictedImageUrl.value = res.data.outImg;
-				} else {
-					// 否则保留原图片路径
-					imageUrl.value = imageUrl.value;
+				state.predictionResult.confidence = data.confidence;
+				state.predictionResult.allTime = data.allTime;
+
+				// 显示预测结果图片
+				if (data.outImg) {
+					predictedImageUrl.value = data.outImg;
 				}
-				console.log(state.predictionResult);
+
+				ElMessage.success('预测成功！');
+
+				// 自动获取AI建议
+				getAISuggestion();
 			} catch (error) {
-				console.error('解析 JSON 时出错:', error);
+				console.error('解析结果时出错:', error);
+				ElMessage.error('预测结果解析失败');
 			}
-			ElMessage.success('预测成功！');
-			// 自动获取AI建议
-			getAISuggestion();
 		} else {
-			ElMessage.error(res.msg);
+			ElMessage.error(res.msg || '预测失败');
 		}
+	}).catch((error) => {
+		state.predictLoading = false;
+		console.error('预测请求失败:', error);
+		ElMessage.error('预测请求失败，请检查网络连接');
 	});
 };
+
 // 获取AI建议
 const getAISuggestion = async () => {
 	if (!state.predictionResult.label) {
-		ElMessage.warning('请先进行预测');
 		return;
 	}
 	
 	state.suggestionLoading = true;
 	try {
-		const apiKey = ''; // 请替换为您的DeepSeekAPI密钥
+		const apiKey = ''; // 请替换为您的DeepSeek API密钥
 		
-		// 构建更详细的提示信息
+		const labels = Array.isArray(state.predictionResult.label)
+			? state.predictionResult.label.join(', ')
+			: state.predictionResult.label;
+
 		const prompt = `作为一个专业的农作物病害专家，请对以下情况进行详细分析：
 
 1. 基本信息：
-- 作物类型：${state.kind_items.find(item => item.value === kind.value)?.label || kind.value}
-- 检测到的病害：${state.predictionResult.label}
+- 检测到的病害：${labels}
 - 检测置信度：${state.predictionResult.confidence}
 
 2. 请提供以下方面的专业分析：
 (1) 病害危害程度：
-1.当前病害的严重程度评估
-2.对作物生长的影响
-3.可能造成的产量损失
+1. 当前病害的严重程度评估
+2. 对作物生长的影响
+3. 可能造成的产量损失
 
 (2) 防治建议：
-1.立即可采取的防治措施
-2.推荐使用的农药或生物防治方法
-3.施药注意事项和防护措施
+1. 立即可采取的防治措施
+2. 推荐使用的农药或生物防治方法
+3. 施药注意事项和防护措施
 
 (3) 预防措施：
-1.日常管理建议
-2.环境控制要点
-3.预防性保护措施
+1. 日常管理建议
+2. 环境控制要点
+3. 预防性保护措施
 
 请用专业但易懂的语言回答，并尽可能提供具体的操作建议。`;
 
-const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+		const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
 			model: 'deepseek-chat',
 			messages: [{
 				role: 'user',
@@ -312,10 +277,9 @@ const response = await axios.post('https://api.deepseek.com/v1/chat/completions'
 		});
 
 		state.aiSuggestion = response.data.choices[0].message.content;
-		ElMessage.success('分析完成');
 	} catch (error) {
 		console.error('获取AI建议出错:', error);
-		ElMessage.error('获取建议失败，请检查网络连接或API密钥是否正确');
+		state.aiSuggestion = '抱歉，暂时无法生成智能建议，请稍后重试。';
 	} finally {
 		state.suggestionLoading = false;
 	}
@@ -357,10 +321,6 @@ const formatTime = (time: string) => {
 	if (!time) return '0秒';
 	return parseFloat(time).toFixed(3) + '秒';
 };
-
-onMounted(() => {
-	getData();
-});
 </script>
 
 <style scoped lang="scss">
