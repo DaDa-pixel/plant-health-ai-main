@@ -1,1 +1,87 @@
-ffmpeg-7.1-full_build
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Python 虚拟环境
+env/
+venv/
+.venv/
+ENV/
+
+# ==================== Java & Spring Boot ====================
+Plant_doctor_Springboot/target/
+Plant_doctor_Springboot/*.jar
+Plant_doctor_Springboot/*.war
+Plant_doctor_Springboot/*.class
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# ==================== Node.js & Vue ====================
+YOLO_AI_CropDisease_Detection_Vue/node_modules/
+YOLO_AI_CropDisease_Detection_Vue/dist/
+YOLO_AI_CropDisease_Detection_Vue/.vite/
+YOLO_AI_CropDisease_Detection_Vue/npm-debug.log*
+YOLO_AI_CropDisease_Detection_Vue/yarn-debug.log*
+YOLO_AI_CropDisease_Detection_Vue/yarn-error.log*
+YOLO_AI_CropDisease_Detection_Vue/.eslintcache
+
+# ==================== AI 模型相关（过大文件）====================
+# PyTorch 模型文件
+plant-health-ai-main/*.pth
+plant-health-ai-main/*.pt
+plant-health-ai-main/*.onnx
+plant-health-ai-main/*.h5
+
+# 训练产生的图片
+plant-health-ai-main/training_*.png
+plant-health-ai-main/confusion_matrix.png
+plant-health-ai-main/Curves.png
+
+# 数据集（过大）
+plant-health-ai-main/datasets/
+
+# Gradio 缓存
+plant-health-ai-main/.gradio/
+
+# ==================== 上传文件和测试图片（过大）====================
+files/
+测试图片/
+
+# 所有图片文件
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.png
+
+# ==================== 日志和临时文件 ====================
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+Thumbs.db
+desktop.ini
+
+# ==================== 压缩文件 ====================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ==================== FFmpeg ====================
