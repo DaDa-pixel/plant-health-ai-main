@@ -95,6 +95,11 @@ public class FlaskAiClient {
                 return error;
             }
 
+            // 添加参数：是否生成热力图（默认true，启用热力图功能）
+            Boolean generateHeatmap = (Boolean) params.getOrDefault("generateHeatmap", true);
+            body.add("generate_heatmap", generateHeatmap.toString());
+            log.info("热力图生成选项: {}", generateHeatmap);
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 

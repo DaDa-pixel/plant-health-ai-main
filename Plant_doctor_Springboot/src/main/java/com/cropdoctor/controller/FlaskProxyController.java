@@ -57,11 +57,11 @@ public class FlaskProxyController {
             log.info("收到预测请求: {}", params);
 
             JSONObject result = flaskAiClient.predict(params);
-            if (result != null && result.getInteger("code") == 0) {
-                return Result.success(result.getString("data"));
+            if (result != null && result.getBooleanValue("success")) {
+                return Result.success(result.toJSONString());
             }
 
-            String errorMsg = result != null ? result.getString("msg") : "预测失败";
+            String errorMsg = result != null ? result.getString("error") : "预测失败";
             return Result.error(errorMsg);
         } catch (Exception e) {
             log.error("预测异常: {}", e.getMessage());
