@@ -169,11 +169,11 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 						},
 					},
 					{
-						path: '/imgRecord',
-						name: 'imgRecord',
-						component: () => import('/@/views/imgRecord/index.vue'),
+						path: '/detectionRecords',
+						name: 'detectionRecords',
+						component: () => import('/@/views/detectionRecords/index.vue'),
 						meta: {
-							title: '图片识别记录',
+							title: '检测记录',
 							isLink: '',
 							isHide: false,
 							isKeepAlive: true,
@@ -181,21 +181,6 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 							isIframe: false,
 							roles: ['admin', 'common', 'others'],
 							icon: 'iconfontjs icon-tpjl',
-						},
-					},
-					{
-						path: '/cameraRecord',
-						name: 'cameraRecord',
-						component: () => import('/@/views/cameraRecord/index.vue'),
-						meta: {
-							title: '摄像识别记录',
-							isLink: '',
-							isHide: false,
-							isKeepAlive: true,
-							isAffix: false,
-							isIframe: false,
-							roles: ['admin', 'common', 'others'],
-							icon: 'iconfontjs icon-sxtjl',
 						},
 					}
 				]

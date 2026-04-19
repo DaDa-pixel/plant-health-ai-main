@@ -127,4 +127,22 @@ public class FlaskProxyController {
             return Result.error(e.getMessage());
         }
     }
+
+    @PostMapping("/chat")
+    public Result<Object> chat(@RequestBody Map<String, String> params) {
+        try {
+            log.info("收到智能对话请求: {}", params);
+            
+            JSONObject result = flaskAiClient.chat(params.get("message"), params.get("disease_context"));
+            if (result != null && result.getBooleanValue("success")) {
+                return Result.success(result);
+            }
+            
+            String errorMsg = result != null ? result.getString("error") : "对话失败";
+            return Result.error(errorMsg);
+        } catch (Exception e) {
+            log.error("智能对话异常: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
+    }
 }

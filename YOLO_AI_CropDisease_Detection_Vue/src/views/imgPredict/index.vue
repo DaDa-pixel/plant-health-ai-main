@@ -9,71 +9,82 @@
           <el-slider v-model="conf" :format-tooltip="formatTooltip" style="width: 300px;" />
         </div>
         <div class="button-section" style="margin-left: auto">
-          <el-button type="primary" @click="upData" class="predict-button" :loading="state.predictLoading" :disabled="state.predictLoading">
-            {{ state.predictLoading ? '诊断中...' : '开始预测' }}
+          <el-button
+              type="primary"
+              @click="upData"
+              class="predict-button"
+              :loading="state.predictLoading"
+              :disabled="state.predictLoading"
+              size="large"
+          >
+            <el-icon v-if="!state.predictLoading"><Promotion /></el-icon>
+            <el-icon v-else><Loading /></el-icon>
+            {{ state.predictLoading ? '诊断中...' : '开始检测' }}
           </el-button>
         </div>
       </div>
 
-      <!-- 预测进度面板 - 修复动画显示问题 -->
-      <div v-if="state.predictLoading || showProgressPanel" class="progress-panel">
-        <div class="progress-panel-inner">
-          <div class="progress-header">
-            <div class="header-left">
-              <div class="icon-wrapper">
-                <el-icon class="pulse-icon"><Loading /></el-icon>
-              </div>
-              <div class="header-info">
-                <span class="progress-title">{{ progressTitle }}</span>
-                <span class="progress-subtitle">AI 智能诊断中</span>
-              </div>
-            </div>
-            <div class="progress-time-wrapper">
-              <span class="progress-time-label">耗时</span>
-              <span class="progress-time-value">{{ elapsedTime }}<span class="time-unit">s</span></span>
-            </div>
-          </div>
-
-          <div class="steps-container">
-            <div
-                v-for="(step, index) in progressSteps"
-                :key="index"
-                :class="['step-item', step.status]"
-            >
-              <div class="step-indicator">
-                <div class="step-dot">
-                  <el-icon v-if="step.status === 'completed'" class="check-icon"><CircleCheckFilled /></el-icon>
-                  <el-icon v-else-if="step.status === 'active'" class="loading-icon rotating"><Loading /></el-icon>
-                  <div v-else class="pending-dot"></div>
+      <!-- 预测进度面板 -->
+      <transition name="fade-slide">
+        <div v-if="state.predictLoading || showProgressPanel" class="progress-panel">
+          <div class="progress-panel-inner">
+            <div class="progress-header">
+              <div class="header-left">
+                <div class="icon-wrapper">
+                  <el-icon class="pulse-icon"><Loading /></el-icon>
                 </div>
-                <div v-if="index < progressSteps.length - 1" class="step-line" :class="{ active: step.status === 'completed' || progressSteps[index + 1]?.status !== 'pending' }"></div>
+                <div class="header-info">
+                  <span class="progress-title">{{ progressTitle }}</span>
+                  <span class="progress-subtitle">AI 智能诊断中</span>
+                </div>
               </div>
-              <div class="step-content">
-                <div class="step-label">{{ step.label }}</div>
-                <div class="step-desc">{{ step.desc }}</div>
+              <div class="progress-time-wrapper">
+                <span class="progress-time-label">耗时</span>
+                <span class="progress-time-value">{{ elapsedTime }}<span class="time-unit">s</span></span>
               </div>
             </div>
-          </div>
 
-          <div class="progress-footer">
-            <div class="progress-bar-wrapper">
-              <el-progress
-                  :percentage="progressPercent"
-                  :stroke-width="6"
-                  :color="progressColor"
-                  :show-text="false"
-              />
+            <div class="steps-container">
+              <div
+                  v-for="(step, index) in progressSteps"
+                  :key="index"
+                  :class="['step-item', step.status]"
+              >
+                <div class="step-indicator">
+                  <div class="step-dot">
+                    <el-icon v-if="step.status === 'completed'" class="check-icon"><CircleCheckFilled /></el-icon>
+                    <el-icon v-else-if="step.status === 'active'" class="loading-icon rotating"><Loading /></el-icon>
+                    <div v-else class="pending-dot"></div>
+                  </div>
+                  <div v-if="index < progressSteps.length - 1" class="step-line" :class="{ active: step.status === 'completed' || progressSteps[index + 1]?.status !== 'pending' }"></div>
+                </div>
+                <div class="step-content">
+                  <div class="step-label">{{ step.label }}</div>
+                  <div class="step-desc">{{ step.desc }}</div>
+                </div>
+              </div>
             </div>
-            <div class="progress-percent">{{ Math.floor(progressPercent) }}%</div>
+
+            <div class="progress-footer">
+              <div class="progress-bar-wrapper">
+                <el-progress
+                    :percentage="progressPercent"
+                    :stroke-width="6"
+                    :color="progressColor"
+                    :show-text="false"
+                />
+              </div>
+              <div class="progress-percent">{{ Math.floor(progressPercent) }}%</div>
+            </div>
           </div>
         </div>
-      </div>
+      </transition>
 
       <!-- 图片显示区域 -->
       <el-row :gutter="20" class="image-display">
         <el-col :span="8">
           <el-card shadow="hover" class="card">
-            <div class="image-title">原图片</div>
+            <div class="image-title">📷 原图片</div>
             <el-upload
                 v-model="state.img"
                 ref="uploadFile"
@@ -87,6 +98,7 @@
               <div v-else class="uploader-content">
                 <el-icon class="upload-icon"><Plus /></el-icon>
                 <div class="upload-text">点击上传图片</div>
+                <div class="upload-hint">支持 JPG、PNG 格式</div>
               </div>
             </el-upload>
           </el-card>
@@ -94,7 +106,7 @@
 
         <el-col :span="8">
           <el-card shadow="hover" class="card">
-            <div class="image-title">预测结果</div>
+            <div class="image-title">🔥 预测结果</div>
             <el-image
                 v-if="predictedImageUrl"
                 :src="predictedImageUrl"
@@ -280,17 +292,14 @@ const resetProgressSteps = () => {
 };
 
 const startProgressAnimation = () => {
-  // 重置所有状态
   resetProgressSteps();
   startTime.value = Date.now();
   elapsedTime.value = '0.0';
 
-  // 立即激活第一个步骤
   if (progressSteps.value.length > 0) {
     progressSteps.value[0].status = 'active';
   }
 
-  // 启动计时器
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     if (state.predictLoading) {
@@ -299,17 +308,14 @@ const startProgressAnimation = () => {
     }
   }, 100);
 
-  // 步骤推进时间线
   const stepDelays = [1200, 2400, 3600, 4800];
 
   stepDelays.forEach((delay, index) => {
     const timer = setTimeout(() => {
       if (state.predictLoading) {
-        // 完成当前步骤
         if (index >= 0 && progressSteps.value[index]) {
           progressSteps.value[index].status = 'completed';
         }
-        // 激活下一步
         if (index + 1 < progressSteps.value.length) {
           progressSteps.value[index + 1].status = 'active';
         }
@@ -320,7 +326,6 @@ const startProgressAnimation = () => {
 };
 
 const stopProgressAnimation = () => {
-  // 清除定时器
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -329,12 +334,10 @@ const stopProgressAnimation = () => {
   stepTimers.forEach(timer => clearTimeout(timer));
   stepTimers = [];
 
-  // 将所有步骤标记为完成
   progressSteps.value.forEach(step => {
     step.status = 'completed';
   });
 
-  // 最终显示完整耗时
   const finalElapsed = (Date.now() - startTime.value) / 1000;
   elapsedTime.value = finalElapsed.toFixed(1);
 };
@@ -355,19 +358,16 @@ const upData = () => {
     return;
   }
 
-  // 重置所有状态
   state.predictLoading = true;
   showProgressPanel.value = true;
   state.form.conf = conf.value / 100;
   state.form.username = userInfos.value.userName;
   state.form.inputImg = state.img;
 
-  // 清空之前的预测结果
   state.predictionResult.label = '';
   state.knowledgeAdvice = '';
   predictedImageUrl.value = '';
 
-  // 启动动画
   startProgressAnimation();
 
   request.post('/api/flask/predict', state.form).then((res) => {
@@ -397,6 +397,10 @@ const upData = () => {
           }
 
           ElMessage.success('预测成功！');
+
+          saveImageRecord(data).catch(err => {
+            console.error('保存图片记录失败:', err);
+          });
         } else {
           ElMessage.error(data.error || '预测失败');
         }
@@ -408,7 +412,6 @@ const upData = () => {
       ElMessage.error(res.msg || '预测失败');
     }
 
-    // 延迟关闭加载动画，让用户看到完成效果
     stopProgressAnimation();
     setTimeout(() => {
       state.predictLoading = false;
@@ -500,6 +503,63 @@ const getConfidenceColor = (value: number) => {
   return '#F56C6C';
 };
 
+const saveImageRecord = async (predictionData: any) => {
+  try {
+    if (!predictionData || !predictionData.disease_name) {
+      console.warn('预测数据不完整，跳过保存记录');
+      return;
+    }
+
+    const now = new Date();
+    const timeStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ':' +
+        String(now.getSeconds()).padStart(2, '0');
+
+    const recordData = {
+      inputImg: state.img,
+      outImg: predictedImageUrl.value,
+      confidence: JSON.stringify([predictionData.confidence || 0]),
+      allTime: elapsedTime.value ? elapsedTime.value + 's' : '0s',
+      conf: state.form.conf ? state.form.conf.toString() : '0.5',
+      weight: 'default',
+      username: userInfos.value.userName || 'unknown',
+      startTime: timeStr,
+      label: JSON.stringify([predictionData.disease_name]),
+      kind: extractCropType(predictionData.disease_name)
+    };
+
+    const res = await request.post('/api/imgRecords', recordData);
+    if (res.code === 0) {
+      console.log('图片检测记录保存成功');
+    } else {
+      console.error('保存图片记录失败:', res.msg);
+    }
+  } catch (error) {
+    console.error('保存图片记录异常:', error);
+  }
+};
+
+const extractCropType = (diseaseName: string): string => {
+  const cropMap: { [key: string]: string } = {
+    '大豆': '大豆', '番茄': '番茄', '玉米': '玉米', '水稻': '水稻',
+    '小麦': '小麦', '马铃薯': '马铃薯', '棉花': '棉花', '苹果': '苹果',
+    '葡萄': '葡萄', '草莓': '草莓', '花生': '花生', '柑橘': '柑橘',
+    'Orange': '柑橘', 'Wheat': '小麦', 'Corn': '玉米', 'Rice': '水稻',
+    'Tomato': '番茄', 'Potato': '马铃薯', 'Cotton': '棉花', 'Apple': '苹果',
+    'Grape': '葡萄', 'Strawberry': '草莓', 'Soybean': '大豆', 'Peanut': '花生'
+  };
+
+  for (const [key, value] of Object.entries(cropMap)) {
+    if (diseaseName.includes(key)) {
+      return value;
+    }
+  }
+  return '未知作物';
+};
+
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
   stepTimers.forEach(timer => clearTimeout(timer));
@@ -513,13 +573,15 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  position: relative;
 
   .system-predict-padding {
     padding: 15px;
     padding-bottom: 0;
     padding-top: 0;
     min-height: calc(100vh - 60px);
+    flex: 1;
   }
 }
 
@@ -530,10 +592,44 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 15px;
   background: white;
-  padding: 12px 20px;
-  border-radius: 12px;
+  padding: 16px 24px;
+  border-radius: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  z-index: 1;
+}
+
+// 开始检测按钮 - 放大美化
+.predict-button {
+  background: linear-gradient(135deg, #409eff 0%, #36a2f1 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.35);
+  transition: all 0.3s ease;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 40px;
+  min-width: 160px;
+
+  .el-icon {
+    margin-right: 8px;
+    font-size: 18px;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(64, 158, 255, 0.45);
+    background: linear-gradient(135deg, #409eff 0%, #2d8fcf 100%);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &.is-loading {
+    background: linear-gradient(135deg, #909399 0%, #76787a 100%);
+    box-shadow: none;
+  }
 }
 
 .progress-panel {
@@ -543,6 +639,8 @@ onUnmounted(() => {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   animation: slideIn 0.3s ease-out;
+  z-index: 100;
+  position: relative;
 
   .progress-panel-inner {
     padding: 24px 28px;
@@ -756,36 +854,45 @@ onUnmounted(() => {
 
 .image-display {
   margin-top: 15px;
+  transition: opacity 0.3s ease;
 
   .card {
     height: 100%;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
 
     .image-title {
       font-size: 16px;
       font-weight: 600;
       color: #303133;
       margin-bottom: 15px;
-      padding-bottom: 10px;
+      padding-bottom: 12px;
       border-bottom: 1px solid #ebeef5;
     }
 
     .avatar-uploader {
       width: 100%;
       height: 358px;
-      border: 1px dashed #d9d9d9;
-      border-radius: 8px;
+      border: 2px dashed #d9d9d9;
+      border-radius: 12px;
       cursor: pointer;
       overflow: hidden;
       transition: all 0.3s;
       display: flex;
       justify-content: center;
       align-items: center;
+      background: #fafafa;
 
       &:hover {
         border-color: #409EFF;
+        background: #f5f9ff;
       }
     }
 
@@ -803,16 +910,21 @@ onUnmounted(() => {
       justify-content: center;
       align-items: center;
       gap: 10px;
-    }
 
-    .upload-icon {
-      font-size: 28px;
-      color: #909399;
-    }
+      .upload-icon {
+        font-size: 48px;
+        color: #c0c4cc;
+      }
 
-    .upload-text {
-      color: #909399;
-      font-size: 14px;
+      .upload-text {
+        color: #909399;
+        font-size: 14px;
+      }
+
+      .upload-hint {
+        color: #c0c4cc;
+        font-size: 12px;
+      }
     }
 
     .placeholder {
@@ -825,7 +937,7 @@ onUnmounted(() => {
       color: #909399;
 
       .el-icon {
-        font-size: 28px;
+        font-size: 48px;
       }
     }
 
@@ -925,8 +1037,8 @@ onUnmounted(() => {
 
   :deep(.el-card) {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     margin: 0;
 
     .el-card__body {
@@ -1050,18 +1162,6 @@ onUnmounted(() => {
   }
 }
 
-.predict-button {
-  background: linear-gradient(45deg, #409eff, #36a2f1);
-  border: none;
-  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
-  }
-}
-
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -1124,5 +1224,16 @@ onUnmounted(() => {
 
 .rotating {
   animation: rotate 1s linear infinite;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

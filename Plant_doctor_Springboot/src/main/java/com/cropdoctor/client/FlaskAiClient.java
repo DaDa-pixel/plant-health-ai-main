@@ -200,4 +200,30 @@ public class FlaskAiClient {
         }
         return null;
     }
+
+    public JSONObject chat(String message, String diseaseContext) {
+        try {
+            String url = flaskBaseUrl + "/chat";
+            
+            Map<String, String> body = new java.util.HashMap<>();
+            body.put("message", message);
+            if (diseaseContext != null && !diseaseContext.isEmpty()) {
+                body.put("disease_context", diseaseContext);
+            }
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return JSON.parseObject(response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("调用Flask智能对话接口失败: {}", e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

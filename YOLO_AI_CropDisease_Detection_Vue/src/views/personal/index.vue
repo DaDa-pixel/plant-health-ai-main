@@ -9,12 +9,11 @@
                   class="avatar-uploader"
                   action="http://localhost:9999/files/upload"
                   :show-file-list="false"
-                  :on-success="handleAvatarSuccessone"
+                  :on-success="handleAvatarSuccess"
               >
-                <img v-if="imageUrl" :src="imageUrl" class="avatar-image" />
+                <img v-if="imageUrl" :src="imageUrl" class="avatar-image" alt="用户头像" />
                 <div v-else class="avatar-placeholder">
-                  <el-icon class="upload-icon"><Plus /></el-icon>
-                  <span>点击上传头像</span>
+                  <span>用户头像</span>
                 </div>
               </el-upload>
             </div>
@@ -33,59 +32,78 @@
                 label-width="100px"
                 class="info-form"
             >
-              <div class="form-grid">
-                <el-form-item label="账号" prop="username">
-                  <el-input v-model="state.form.username" placeholder="请输入账号">
-                    <template #prefix>
-                      <el-icon><User /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="密码" prop="password">
-                  <el-input
-                      v-model="state.form.password"
-                      type="password"
-                      placeholder="请输入密码"
-                      show-password
-                  >
-                    <template #prefix>
-                      <el-icon><Lock /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="姓名" prop="name">
-                  <el-input v-model="state.form.name" placeholder="请输入姓名">
-                    <template #prefix>
-                      <el-icon><UserFilled /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="性别" prop="sex">
-                  <el-select v-model="state.form.sex" placeholder="请选择性别">
-                    <el-option label="男" value="男" />
-                    <el-option label="女" value="女" />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="Email" prop="email">
-                  <el-input v-model="state.form.email" placeholder="请输入Email">
-                    <template #prefix>
-                      <el-icon><Message /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="手机号码" prop="tel">
-                  <el-input v-model="state.form.tel" placeholder="请输入手机号码">
-                    <template #prefix>
-                      <el-icon><Phone /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-              </div>
-              <div class="form-footer">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="账号" prop="username">
+                    <el-input v-model="state.form.username" placeholder="请输入账号">
+                      <template #prefix>
+                        <el-icon><User /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="密码" prop="password">
+                    <el-input
+                        v-model="state.form.password"
+                        type="password"
+                        placeholder="请输入密码"
+                        show-password
+                    >
+                      <template #prefix>
+                        <el-icon><Lock /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="姓名" prop="name">
+                    <el-input v-model="state.form.name" placeholder="请输入姓名">
+                      <template #prefix>
+                        <el-icon><UserFilled /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="性别" prop="sex">
+                    <el-select v-model="state.form.sex" placeholder="请选择性别">
+                      <el-option label="男" value="男" />
+                      <el-option label="女" value="女" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Email" prop="email">
+                    <el-input v-model="state.form.email" placeholder="请输入Email">
+                      <template #prefix>
+                        <el-icon><Message /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="手机号码" prop="tel">
+                    <el-input v-model="state.form.tel" placeholder="请输入手机号码">
+                      <template #prefix>
+                        <el-icon><Phone /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
                 <el-button type="primary" @click="submitForm" :icon="Check" class="submit-button">
                   确认修改
                 </el-button>
-              </div>
+              </el-form-item>
             </el-form>
           </div>
         </div>
@@ -96,17 +114,17 @@
 
 <script setup lang="ts" name="personal">
 import { reactive, ref, onMounted, computed } from 'vue';
-import type { UploadProps, FormInstance } from 'element-plus';
+import type { FormInstance } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import request from '/@/utils/request';
 import { useUserInfo } from '/@/stores/userInfo';
 import { storeToRefs } from 'pinia';
 import { Plus, Check, User, Lock, UserFilled, Message, Phone } from '@element-plus/icons-vue';
+import { Session } from '/@/utils/storage';
 
 const imageUrl = ref('');
 const formRef = ref<FormInstance>();
 
-// 表单验证规则
 const rules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -131,9 +149,18 @@ const rules = {
   ]
 };
 
-const handleAvatarSuccessone: UploadProps['onSuccess'] = (response, uploadFile) => {
-  imageUrl.value = URL.createObjectURL(uploadFile.raw!);
-  state.form.avatar = response.data;
+const handleAvatarSuccess = (response: any) => {
+  if (response.code === 0) {
+    imageUrl.value = response.data;
+    state.form.avatar = response.data;
+
+    userInfos.value.photo = response.data;
+    Session.set('userInfo', userInfos.value);
+
+    ElMessage.success('头像上传成功');
+  } else {
+    ElMessage.error('头像上传失败');
+  }
 };
 
 const state = reactive({
@@ -143,7 +170,6 @@ const state = reactive({
 const stores = useUserInfo();
 const { userInfos } = storeToRefs(stores);
 
-// 计算属性：显示用的角色名称
 const displayRole = computed(() => {
   const role = state.form.role;
   if (role === 'admin') return '管理员';
@@ -169,12 +195,11 @@ const getTableData = () => {
 const submitForm = async () => {
   if (!formRef.value) return;
 
-  await formRef.value.validate((valid, fields) => {
+  await formRef.value.validate((valid) => {
     if (valid) {
       upData();
     } else {
       ElMessage.error('请完善必填信息');
-      return false;
     }
   });
 };
@@ -182,6 +207,11 @@ const submitForm = async () => {
 const upData = () => {
   request.post('/api/user/update', state.form).then((res) => {
     if (res.code == 0) {
+      if (res.data && res.data.avatar) {
+        userInfos.value.photo = res.data.avatar;
+        Session.set('userInfo', userInfos.value);
+      }
+
       ElMessage.success('修改成功！');
       getTableData();
     } else {
@@ -262,15 +292,7 @@ onMounted(() => {
                 justify-content: center;
                 align-items: center;
                 color: #909399;
-
-                .upload-icon {
-                  font-size: 36px;
-                  margin-bottom: 12px;
-                }
-
-                span {
-                  font-size: 14px;
-                }
+                font-size: 16px;
               }
             }
           }
@@ -309,73 +331,57 @@ onMounted(() => {
           }
 
           .info-form {
-            .form-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 32px;
+            :deep(.el-form-item__label) {
+              font-weight: 500;
+              color: #2c3e50;
+            }
 
-              :deep(.el-form-item) {
-                margin-bottom: 0;
+            :deep(.el-input__wrapper) {
+              box-shadow: 0 0 0 1px #e4e7ed inset;
+              border-radius: 8px;
+              padding: 0 12px;
+              height: 42px;
+              transition: all 0.3s;
 
-                .el-form-item__label {
-                  font-weight: 500;
-                  color: #2c3e50;
+              &:hover,
+              &.is-focus {
+                box-shadow: 0 0 0 1px #409eff inset;
+              }
+
+              .el-input__prefix {
+                margin-right: 8px;
+                color: #909399;
+              }
+            }
+
+            :deep(.el-select) {
+              width: 100%;
+
+              .el-input__wrapper {
+                box-shadow: 0 0 0 1px #e4e7ed inset !important;
+
+                &:hover {
+                  box-shadow: 0 0 0 1px #409eff inset !important;
                 }
 
-                .el-input__wrapper {
-                  box-shadow: 0 0 0 1px #e4e7ed inset;
-                  border-radius: 8px;
-                  padding: 0 12px;
-                  height: 42px;
-                  transition: all 0.3s;
-
-                  &:hover,
-                  &.is-focus {
-                    box-shadow: 0 0 0 1px #409eff inset;
-                  }
-
-                  .el-input__prefix {
-                    margin-right: 8px;
-                    color: #909399;
-                  }
-                }
-
-                .el-select {
-                  width: 100%;
-
-                  :deep(.el-input) {
-                    .el-input__wrapper {
-                      box-shadow: 0 0 0 1px #e4e7ed inset !important;
-
-                      &:hover {
-                        box-shadow: 0 0 0 1px #409eff inset !important;
-                      }
-
-                      &.is-focus {
-                        box-shadow: 0 0 0 1px #409eff inset !important;
-                      }
-                    }
-                  }
+                &.is-focus {
+                  box-shadow: 0 0 0 1px #409eff inset !important;
                 }
               }
             }
 
-            .form-footer {
-              margin-top: 40px;
-              text-align: right;
+            .submit-button {
+              padding: 12px 36px;
+              font-size: 15px;
+              border-radius: 8px;
+              background: linear-gradient(135deg, #409eff, #36a2f1);
+              border: none;
+              transition: all 0.3s ease;
+              float: right;
 
-              .submit-button {
-                padding: 12px 36px;
-                font-size: 15px;
-                border-radius: 8px;
-                background: linear-gradient(135deg, #409eff, #36a2f1);
-                border: none;
-                transition: all 0.3s ease;
-
-                &:hover {
-                  transform: translateY(-2px);
-                  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
-                }
+              &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
               }
             }
           }
@@ -396,13 +402,6 @@ onMounted(() => {
 
         .info-card {
           padding: 24px;
-
-          .info-form {
-            .form-grid {
-              grid-template-columns: 1fr;
-              gap: 24px;
-            }
-          }
         }
       }
     }
