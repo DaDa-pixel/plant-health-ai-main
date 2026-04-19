@@ -9,15 +9,68 @@
           <el-slider v-model="conf" :format-tooltip="formatTooltip" style="width: 300px;" />
         </div>
         <div class="button-section" style="margin-left: auto">
-          <el-button type="primary" @click="upData" class="predict-button" :loading="state.predictLoading">
-            开始预测
+          <el-button type="primary" @click="upData" class="predict-button" :loading="state.predictLoading" :disabled="state.predictLoading">
+            {{ state.predictLoading ? '诊断中...' : '开始预测' }}
           </el-button>
+        </div>
+      </div>
+
+      <!-- 预测进度面板 - 修复动画显示问题 -->
+      <div v-if="state.predictLoading || showProgressPanel" class="progress-panel">
+        <div class="progress-panel-inner">
+          <div class="progress-header">
+            <div class="header-left">
+              <div class="icon-wrapper">
+                <el-icon class="pulse-icon"><Loading /></el-icon>
+              </div>
+              <div class="header-info">
+                <span class="progress-title">{{ progressTitle }}</span>
+                <span class="progress-subtitle">AI 智能诊断中</span>
+              </div>
+            </div>
+            <div class="progress-time-wrapper">
+              <span class="progress-time-label">耗时</span>
+              <span class="progress-time-value">{{ elapsedTime }}<span class="time-unit">s</span></span>
+            </div>
+          </div>
+
+          <div class="steps-container">
+            <div
+                v-for="(step, index) in progressSteps"
+                :key="index"
+                :class="['step-item', step.status]"
+            >
+              <div class="step-indicator">
+                <div class="step-dot">
+                  <el-icon v-if="step.status === 'completed'" class="check-icon"><CircleCheckFilled /></el-icon>
+                  <el-icon v-else-if="step.status === 'active'" class="loading-icon rotating"><Loading /></el-icon>
+                  <div v-else class="pending-dot"></div>
+                </div>
+                <div v-if="index < progressSteps.length - 1" class="step-line" :class="{ active: step.status === 'completed' || progressSteps[index + 1]?.status !== 'pending' }"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-label">{{ step.label }}</div>
+                <div class="step-desc">{{ step.desc }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="progress-footer">
+            <div class="progress-bar-wrapper">
+              <el-progress
+                  :percentage="progressPercent"
+                  :stroke-width="6"
+                  :color="progressColor"
+                  :show-text="false"
+              />
+            </div>
+            <div class="progress-percent">{{ Math.floor(progressPercent) }}%</div>
+          </div>
         </div>
       </div>
 
       <!-- 图片显示区域 -->
       <el-row :gutter="20" class="image-display">
-        <!-- 原图展示 -->
         <el-col :span="8">
           <el-card shadow="hover" class="card">
             <div class="image-title">原图片</div>
@@ -28,19 +81,17 @@
                 action="/api/files/upload"
                 :show-file-list="false"
                 :on-success="handleAvatarSuccessone"
+                :disabled="state.predictLoading"
             >
               <el-image v-if="imageUrl" :src="imageUrl" class="preview-image" fit="contain" />
               <div v-else class="uploader-content">
-                <el-icon class="upload-icon">
-                  <Plus />
-                </el-icon>
+                <el-icon class="upload-icon"><Plus /></el-icon>
                 <div class="upload-text">点击上传图片</div>
               </div>
             </el-upload>
           </el-card>
         </el-col>
 
-        <!-- 预测结果图（热力图） -->
         <el-col :span="8">
           <el-card shadow="hover" class="card">
             <div class="image-title">预测结果</div>
@@ -51,15 +102,12 @@
                 fit="contain"
             />
             <div v-else class="placeholder">
-              <el-icon>
-                <Picture />
-              </el-icon>
+              <el-icon><Picture /></el-icon>
               <span>预测后将在此显示热力图</span>
             </div>
           </el-card>
         </el-col>
 
-        <!-- 智能医生对话 -->
         <el-col :span="8">
           <el-card shadow="hover" class="card doctor-card">
             <div class="image-title">🩺 智能医生</div>
@@ -108,9 +156,9 @@
               <div class="result-column narrow">
                 <div class="result-title">📊 预测概率</div>
                 <div class="result-item">
-									<span class="result-value confidence-value" :style="{ color: getConfidenceColor(state.predictionResult.confidenceValue) }">
-										{{ state.predictionResult.confidence }}
-									</span>
+                  <span class="result-value confidence-value" :style="{ color: getConfidenceColor(state.predictionResult.confidenceValue) }">
+                    {{ state.predictionResult.confidence }}
+                  </span>
                 </div>
               </div>
               <div class="result-column narrow">
@@ -142,11 +190,11 @@
 </template>
 
 <script setup lang="ts" name="imgPredict">
-import { reactive, ref, nextTick } from 'vue';
+import { reactive, ref, nextTick, computed, onUnmounted } from 'vue';
 import type { UploadInstance, UploadProps } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import request from '/@/utils/request';
-import { Plus, Picture, Promotion } from '@element-plus/icons-vue';
+import { Plus, Picture, Promotion, Loading, CircleCheckFilled } from '@element-plus/icons-vue';
 import { useUserInfo } from '/@/stores/userInfo';
 import { storeToRefs } from 'pinia';
 
@@ -158,10 +206,21 @@ const { userInfos } = storeToRefs(stores);
 const predictedImageUrl = ref('');
 const isReliable = ref(false);
 const chatMessagesRef = ref<HTMLElement | null>(null);
+const showProgressPanel = ref(false);
+const startTime = ref<number>(0);
+const elapsedTime = ref<string>('0.0');
+let timerInterval: any = null;
+let stepTimers: any[] = [];
 
 interface ChatMessage {
   role: 'user' | 'doctor';
   content: string;
+}
+
+interface ProgressStep {
+  label: string;
+  desc: string;
+  status: 'pending' | 'active' | 'completed';
 }
 
 const state = reactive({
@@ -184,8 +243,100 @@ const state = reactive({
   doctorTyping: false,
 });
 
+const progressSteps = ref<ProgressStep[]>([
+  { label: '图像预处理', desc: '图像尺寸调整、归一化处理', status: 'pending' },
+  { label: '模型推理', desc: 'AI神经网络分析病害特征', status: 'pending' },
+  { label: '生成热力图', desc: 'Grad-CAM 可视化关注区域', status: 'pending' },
+  { label: '检索知识库', desc: '匹配防治建议与专家知识', status: 'pending' },
+]);
+
+const progressPercent = computed(() => {
+  const completedCount = progressSteps.value.filter(s => s.status === 'completed').length;
+  const activeExists = progressSteps.value.some(s => s.status === 'active') ? 0.5 : 0;
+  return Math.min(((completedCount + activeExists) / progressSteps.value.length) * 100, 100);
+});
+
+const progressColor = computed(() => {
+  if (progressPercent.value >= 80) return '#67C23A';
+  if (progressPercent.value >= 40) return '#E6A23C';
+  return '#409EFF';
+});
+
+const progressTitle = computed(() => {
+  const activeStep = progressSteps.value.find(s => s.status === 'active');
+  if (activeStep) return activeStep.label;
+  if (progressSteps.value.every(s => s.status === 'completed')) return '诊断完成';
+  return '准备就绪';
+});
+
 const formatTooltip = (val: number) => {
   return (val / 100).toFixed(2);
+};
+
+const resetProgressSteps = () => {
+  progressSteps.value.forEach(step => {
+    step.status = 'pending';
+  });
+};
+
+const startProgressAnimation = () => {
+  // 重置所有状态
+  resetProgressSteps();
+  startTime.value = Date.now();
+  elapsedTime.value = '0.0';
+
+  // 立即激活第一个步骤
+  if (progressSteps.value.length > 0) {
+    progressSteps.value[0].status = 'active';
+  }
+
+  // 启动计时器
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (state.predictLoading) {
+      const elapsed = (Date.now() - startTime.value) / 1000;
+      elapsedTime.value = elapsed.toFixed(1);
+    }
+  }, 100);
+
+  // 步骤推进时间线
+  const stepDelays = [1200, 2400, 3600, 4800];
+
+  stepDelays.forEach((delay, index) => {
+    const timer = setTimeout(() => {
+      if (state.predictLoading) {
+        // 完成当前步骤
+        if (index >= 0 && progressSteps.value[index]) {
+          progressSteps.value[index].status = 'completed';
+        }
+        // 激活下一步
+        if (index + 1 < progressSteps.value.length) {
+          progressSteps.value[index + 1].status = 'active';
+        }
+      }
+    }, delay);
+    stepTimers.push(timer);
+  });
+};
+
+const stopProgressAnimation = () => {
+  // 清除定时器
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  stepTimers.forEach(timer => clearTimeout(timer));
+  stepTimers = [];
+
+  // 将所有步骤标记为完成
+  progressSteps.value.forEach(step => {
+    step.status = 'completed';
+  });
+
+  // 最终显示完整耗时
+  const finalElapsed = (Date.now() - startTime.value) / 1000;
+  elapsedTime.value = finalElapsed.toFixed(1);
 };
 
 const handleAvatarSuccessone: UploadProps['onSuccess'] = (response, uploadFile) => {
@@ -204,52 +355,40 @@ const upData = () => {
     return;
   }
 
+  // 重置所有状态
   state.predictLoading = true;
+  showProgressPanel.value = true;
   state.form.conf = conf.value / 100;
   state.form.username = userInfos.value.userName;
   state.form.inputImg = state.img;
 
-  request.post('/api/flask/predict', state.form).then((res) => {
-    state.predictLoading = false;
+  // 清空之前的预测结果
+  state.predictionResult.label = '';
+  state.knowledgeAdvice = '';
+  predictedImageUrl.value = '';
 
+  // 启动动画
+  startProgressAnimation();
+
+  request.post('/api/flask/predict', state.form).then((res) => {
     if (res.code === 0) {
       try {
         const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
 
         if (data.success) {
           state.predictionResult.label = data.disease_name || '未知病害';
-
           const confidencePercent = (data.confidence * 100).toFixed(2);
           state.predictionResult.confidence = confidencePercent + '%';
           state.predictionResult.confidenceValue = data.confidence;
-
-          state.predictionResult.allTime = data.processing_time || '0';
-
           isReliable.value = data.is_reliable || false;
 
           if (data.heatmap_base64) {
             predictedImageUrl.value = data.heatmap_base64;
-          } else {
-            predictedImageUrl.value = '';
           }
 
           if (data.advice) {
             state.knowledgeAdvice = data.advice;
-
-            const initialMessage = `您好！我是智能植物医生 🩺
-
-**诊断结果：**${data.disease_name}
-**置信度：**${(data.confidence * 100).toFixed(2)}%
-
-我已经从知识库中获取了详细的防治建议（见下方"知识库建议"栏）。
-
-您可以问我任何问题，例如：
-• 这个病害的具体症状是什么？
-• 应该如何防治？
-• 有什么预防措施吗？
-• 会影响产量吗？
-
-请问您想了解什么？`;
+            const initialMessage = `您好！我是智能植物医生 🩺\n\n**诊断结果：**${data.disease_name}\n**置信度：**${(data.confidence * 100).toFixed(2)}%\n\n我已经从知识库中获取了详细的防治建议（见下方"知识库建议"栏）。\n\n您可以问我任何问题，例如：\n• 这个病害的具体症状是什么？\n• 应该如何防治？\n• 有什么预防措施吗？\n\n请问您想了解什么？`;
 
             state.chatMessages = [{
               role: 'doctor',
@@ -268,17 +407,27 @@ const upData = () => {
     } else {
       ElMessage.error(res.msg || '预测失败');
     }
+
+    // 延迟关闭加载动画，让用户看到完成效果
+    stopProgressAnimation();
+    setTimeout(() => {
+      state.predictLoading = false;
+      showProgressPanel.value = false;
+    }, 500);
   }).catch((error) => {
-    state.predictLoading = false;
     console.error('预测请求失败:', error);
     ElMessage.error('预测请求失败，请检查网络连接');
+
+    stopProgressAnimation();
+    setTimeout(() => {
+      state.predictLoading = false;
+      showProgressPanel.value = false;
+    }, 500);
   });
 };
 
 const sendToDoctor = async () => {
-  if (!state.userQuestion.trim() || !state.predictionResult.label) {
-    return;
-  }
+  if (!state.userQuestion.trim() || !state.predictionResult.label) return;
 
   const question = state.userQuestion.trim();
   state.userQuestion = '';
@@ -294,18 +443,14 @@ const sendToDoctor = async () => {
   try {
     const response = await fetch('http://localhost:5000/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: question,
         disease_context: state.predictionResult.label
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const result = await response.json();
 
@@ -339,8 +484,7 @@ const scrollToBottom = () => {
 
 const formatAdvice = (advice: string) => {
   if (!advice) return '';
-
-  let formatted = advice
+  return advice
       .replace(/\n/g, '<br/>')
       .replace(/🌱/g, '<span class="emoji">🌱</span>')
       .replace(/🌾/g, '<span class="emoji">🌾</span>')
@@ -348,8 +492,6 @@ const formatAdvice = (advice: string) => {
       .replace(/💊/g, '<span class="emoji">💊</span>')
       .replace(/💡/g, '<span class="emoji">💡</span>')
       .replace(/📚/g, '<span class="emoji">📚</span>');
-
-  return formatted;
 };
 
 const getConfidenceColor = (value: number) => {
@@ -358,6 +500,10 @@ const getConfidenceColor = (value: number) => {
   return '#F56C6C';
 };
 
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval);
+  stepTimers.forEach(timer => clearTimeout(timer));
+});
 </script>
 
 <style scoped lang="scss">
@@ -379,16 +525,233 @@ const getConfidenceColor = (value: number) => {
 
 .header {
   width: 100%;
-  padding: 10px 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 15px;
-  margin-bottom: 1px;
   background: white;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.progress-panel {
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+
+  .progress-panel-inner {
+    padding: 24px 28px;
+  }
+
+  .progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .icon-wrapper {
+        width: 48px;
+        height: 48px;
+        background: rgba(64, 158, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .pulse-icon {
+          font-size: 28px;
+          color: #409EFF;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+      }
+
+      .header-info {
+        .progress-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: white;
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .progress-subtitle {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+      }
+    }
+
+    .progress-time-wrapper {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 40px;
+      text-align: center;
+
+      .progress-time-label {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-right: 8px;
+      }
+
+      .progress-time-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #409EFF;
+        font-family: 'Courier New', monospace;
+
+        .time-unit {
+          font-size: 14px;
+          font-weight: 400;
+          margin-left: 2px;
+        }
+      }
+    }
+  }
+
+  .steps-container {
+    margin-bottom: 24px;
+
+    .step-item {
+      display: flex;
+      margin-bottom: 20px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .step-indicator {
+        position: relative;
+        width: 32px;
+        margin-right: 16px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        .step-dot {
+          width: 32px;
+          height: 32px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+          transition: all 0.3s ease;
+
+          .check-icon {
+            font-size: 20px;
+            color: #67C23A;
+          }
+
+          .loading-icon {
+            font-size: 18px;
+            color: #409EFF;
+          }
+
+          .pending-dot {
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+          }
+        }
+
+        .step-line {
+          width: 2px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.1);
+          margin-top: 4px;
+          transition: all 0.3s ease;
+
+          &.active {
+            background: linear-gradient(180deg, #409EFF 0%, #67C23A 100%);
+          }
+        }
+      }
+
+      .step-content {
+        flex: 1;
+        padding-bottom: 4px;
+
+        .step-label {
+          font-size: 15px;
+          font-weight: 600;
+          color: white;
+          margin-bottom: 4px;
+        }
+
+        .step-desc {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+      }
+
+      &.completed {
+        .step-label {
+          color: #67C23A;
+        }
+        .step-desc {
+          color: rgba(103, 194, 58, 0.7);
+        }
+        .step-dot {
+          background: rgba(103, 194, 58, 0.2);
+        }
+      }
+
+      &.active {
+        .step-label {
+          color: #409EFF;
+        }
+        .step-dot {
+          background: rgba(64, 158, 255, 0.2);
+          box-shadow: 0 0 0 4px rgba(64, 158, 255, 0.2);
+          animation: glow 1.5s ease-in-out infinite;
+        }
+      }
+    }
+  }
+
+  .progress-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    .progress-bar-wrapper {
+      flex: 1;
+
+      :deep(.el-progress-bar__outer) {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+      }
+
+      :deep(.el-progress-bar__inner) {
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+    }
+
+    .progress-percent {
+      font-size: 14px;
+      font-weight: 600;
+      color: #409EFF;
+      min-width: 45px;
+      text-align: right;
+    }
+  }
 }
 
 .image-display {
@@ -397,14 +760,8 @@ const getConfidenceColor = (value: number) => {
   .card {
     height: 100%;
     background: white;
-    border-radius: 8px;
-    box-shadow: none;
-    transition: all 0.3s ease;
-
-    &:hover {
-      transform: none;
-      box-shadow: none;
-    }
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
     .image-title {
       font-size: 16px;
@@ -419,17 +776,16 @@ const getConfidenceColor = (value: number) => {
       width: 100%;
       height: 358px;
       border: 1px dashed #d9d9d9;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
-      position: relative;
       overflow: hidden;
-      transition: var(--el-transition-duration-fast);
+      transition: all 0.3s;
       display: flex;
       justify-content: center;
       align-items: center;
 
       &:hover {
-        border-color: var(--el-color-primary);
+        border-color: #409EFF;
       }
     }
 
@@ -569,8 +925,8 @@ const getConfidenceColor = (value: number) => {
 
   :deep(.el-card) {
     background: white;
-    border-radius: 8px;
-    box-shadow: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     margin: 0;
 
     .el-card__body {
@@ -584,7 +940,7 @@ const getConfidenceColor = (value: number) => {
     align-items: flex-start;
     padding: 20px;
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     min-height: 140px;
 
     .result-column {
@@ -634,7 +990,6 @@ const getConfidenceColor = (value: number) => {
           }
         }
 
-        /* 知识库建议滚动区域 - 修复截断问题 */
         .advice-wrapper {
           width: 100%;
         }
@@ -651,10 +1006,8 @@ const getConfidenceColor = (value: number) => {
           word-wrap: break-word;
           word-break: break-word;
 
-          /* 自定义滚动条样式 */
           &::-webkit-scrollbar {
             width: 6px;
-            height: 6px;
           }
 
           &::-webkit-scrollbar-track {
@@ -709,6 +1062,17 @@ const getConfidenceColor = (value: number) => {
   }
 }
 
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -727,5 +1091,38 @@ const getConfidenceColor = (value: number) => {
   30% {
     transform: translateY(-6px);
   }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(64, 158, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(64, 158, 255, 0.4);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
 }
 </style>

@@ -74,4 +74,57 @@ public class FlaskProxyController {
         boolean isHealthy = flaskAiClient.healthCheck();
         return Result.success(isHealthy);
     }
+
+    @PostMapping("/knowledge/search")
+    public Result<Object> searchKnowledge(@RequestBody Map<String, String> params) {
+        try {
+            log.info("收到知识库搜索请求: {}", params);
+            
+            JSONObject result = flaskAiClient.searchKnowledge(params.get("keyword"));
+            if (result != null && result.getBooleanValue("success")) {
+                return Result.success(result);
+            }
+            
+            String errorMsg = result != null ? result.getString("error") : "搜索失败";
+            return Result.error(errorMsg);
+        } catch (Exception e) {
+            log.error("知识库搜索异常: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @GetMapping("/diseases")
+    public Result<Object> getDiseases() {
+        try {
+            log.info("收到获取病害列表请求");
+            
+            JSONObject result = flaskAiClient.getDiseases();
+            if (result != null && result.getBooleanValue("success")) {
+                return Result.success(result);
+            }
+            
+            return Result.error("获取病害列表失败");
+        } catch (Exception e) {
+            log.error("获取病害列表异常: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/env_advice")
+    public Result<Object> getEnvAdvice(@RequestBody Map<String, Object> envData) {
+        try {
+            log.info("收到环境监测建议请求: {}", envData);
+            
+            JSONObject result = flaskAiClient.getEnvAdvice(envData);
+            if (result != null && result.getBooleanValue("success")) {
+                return Result.success(result);
+            }
+            
+            String errorMsg = result != null ? result.getString("error") : "获取环境建议失败";
+            return Result.error(errorMsg);
+        } catch (Exception e) {
+            log.error("获取环境建议异常: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
+    }
 }

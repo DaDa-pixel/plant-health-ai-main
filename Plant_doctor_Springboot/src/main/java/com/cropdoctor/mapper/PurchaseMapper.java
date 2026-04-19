@@ -1,0 +1,9 @@
+package com.cropdoctor.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.cropdoctor.entity.Purchase;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface PurchaseMapper extends BaseMapper<Purchase> {
+}

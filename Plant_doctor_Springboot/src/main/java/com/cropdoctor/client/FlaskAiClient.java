@@ -100,6 +100,13 @@ public class FlaskAiClient {
             body.add("generate_heatmap", generateHeatmap.toString());
             log.info("热力图生成选项: {}", generateHeatmap);
 
+            // 添加参数：置信度阈值
+            Object conf = params.get("conf");
+            if (conf != null) {
+                body.add("conf", conf.toString());
+                log.info("置信度阈值: {}", conf);
+            }
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
@@ -134,5 +141,63 @@ public class FlaskAiClient {
             log.error("Flask服务健康检查失败: {}", e.getMessage());
             return false;
         }
+    }
+
+    public JSONObject searchKnowledge(String keyword) {
+        try {
+            String url = flaskBaseUrl + "/knowledge/search";
+            
+            Map<String, String> body = new java.util.HashMap<>();
+            body.put("keyword", keyword);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return JSON.parseObject(response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("调用Flask知识库搜索接口失败: {}", e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public JSONObject getDiseases() {
+        try {
+            String url = flaskBaseUrl + "/diseases";
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return JSON.parseObject(response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("调用Flask获取病害列表接口失败: {}", e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public JSONObject getEnvAdvice(Map<String, Object> envData) {
+        try {
+            String url = flaskBaseUrl + "/env_advice";
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(envData, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return JSON.parseObject(response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("调用Flask环境建议接口失败: {}", e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 }
