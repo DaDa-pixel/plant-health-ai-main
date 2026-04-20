@@ -67,8 +67,8 @@ This project is an intelligent crop disease detection system that leverages the 
    python main.py
    ```
 
-**Frontend Setup (Vue):**
-1. Navigate to the `YOLO_AI_CropDisease_Detection_Vue` directory.
+**Step 4: Frontend Setup (Vue)**
+1. Navigate to the `Plant_doctor_Vue` directory
 2. Install dependencies:
    ```shell
    npm install

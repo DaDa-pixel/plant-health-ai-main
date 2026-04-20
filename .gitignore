@@ -28,13 +28,13 @@ Plant_doctor_Springboot/*.class
 .DS_Store
 
 # ==================== Node.js & Vue ====================
-YOLO_AI_CropDisease_Detection_Vue/node_modules/
-YOLO_AI_CropDisease_Detection_Vue/dist/
-YOLO_AI_CropDisease_Detection_Vue/.vite/
-YOLO_AI_CropDisease_Detection_Vue/npm-debug.log*
-YOLO_AI_CropDisease_Detection_Vue/yarn-debug.log*
-YOLO_AI_CropDisease_Detection_Vue/yarn-error.log*
-YOLO_AI_CropDisease_Detection_Vue/.eslintcache
+Plant_doctor_Vue/node_modules/
+Plant_doctor_Vue/dist/
+Plant_doctor_Vue/.vite/
+Plant_doctor_Vue/npm-debug.log*
+Plant_doctor_Vue/yarn-debug.log*
+Plant_doctor_Vue/yarn-error.log*
+Plant_doctor_Vue/.eslintcache
 
 # ==================== AI 模型相关（过大文件）====================
 # PyTorch 模型文件
