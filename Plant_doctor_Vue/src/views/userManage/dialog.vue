@@ -6,7 +6,7 @@
 					v-model="state.form.avatar"
 					ref="uploadFile"
 					class="avatar-uploader"
-					action="http://localhost:9999/files/upload"
+					action="/api/files/upload"
 					:show-file-list="false"
 					:on-success="handleAvatarSuccessone"
 				>
@@ -148,6 +148,8 @@ const openDialog = (type: string, row: RowRoleType) => {
 	} else {
 		state.dialog.title = '新增信息';
 		state.dialog.submitTxt = '新 增';
+		state.form = {} as any;
+
 		// 清空表单，此项需加表单验证才能使用
 		nextTick(() => {
 			uploadFile.value!.clearFiles(); //该方法就是清理上传列表

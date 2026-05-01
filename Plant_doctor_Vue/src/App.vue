@@ -1,11 +1,11 @@
 <template>
-	<el-config-provider :size="getGlobalComponentSize" :locale="getGlobalI18n">
+	<ell-config-provider :size="getGlobalComponentSize" :locale="getGlobalI18n">
 		<router-view v-show="themeConfig.lockScreenTime > 1" />
 		<LockScreen v-if="themeConfig.isLockScreen" />
 		<Setings ref="setingsRef" v-show="themeConfig.lockScreenTime > 1" />
 		<CloseFull v-if="!themeConfig.isLockScreen" />
 		<!-- <Upgrade v-if="getVersion" /> -->
-	</el-config-provider>
+	</ell-config-provider>
 </template>
 
 <script setup lang="ts" name="app">

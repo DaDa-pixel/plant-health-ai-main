@@ -40,8 +40,9 @@ public class FileUploadController {
             Path filePath = Paths.get(uploadPath, fileName);
             Files.write(filePath, file.getBytes());
 
-            log.info("文件上传成功: {}", fileName);
-            return Result.success(fileName);
+            String fileUrl = "/uploads/" + fileName;
+            log.info("文件上传成功: {}", fileUrl);
+            return Result.success(fileUrl);
 
         } catch (IOException e) {
             log.error("文件上传失败: {}", e.getMessage());

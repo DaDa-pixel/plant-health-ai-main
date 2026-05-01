@@ -7,7 +7,7 @@
             <div class="avatar-wrapper">
               <el-upload
                   class="avatar-uploader"
-                  action="http://localhost:9999/files/upload"
+                  action="/api/files/upload"
                   :show-file-list="false"
                   :on-success="handleAvatarSuccess"
               >
@@ -207,11 +207,6 @@ const submitForm = async () => {
 const upData = () => {
   request.post('/api/user/update', state.form).then((res) => {
     if (res.code == 0) {
-      if (res.data && res.data.avatar) {
-        userInfos.value.photo = res.data.avatar;
-        Session.set('userInfo', userInfos.value);
-      }
-
       ElMessage.success('修改成功！');
       getTableData();
     } else {

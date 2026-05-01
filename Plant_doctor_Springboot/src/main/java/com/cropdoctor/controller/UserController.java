@@ -19,6 +19,19 @@ public class UserController {
     private UserService userService;
 
     /**
+     * 兼容旧数据：如果头像路径不以 / 或 http 开头，补上 /uploads/ 前缀
+     */
+    private String normalizeAvatar(String avatar) {
+        if (avatar == null || avatar.isEmpty()) {
+            return avatar;
+        }
+        if (avatar.startsWith("/") || avatar.startsWith("http")) {
+            return avatar;
+        }
+        return "/uploads/" + avatar;
+    }
+
+    /**
      * 用户登录
      */
     @PostMapping("/login")
@@ -45,7 +58,7 @@ public class UserController {
                 data.put("email", user.getEmail());
                 data.put("tel", user.getTel());
                 data.put("role", user.getRole());
-                data.put("avatar", user.getAvatar());
+                data.put("avatar", normalizeAvatar(user.getAvatar()));
 
                 log.info("用户登录成功: {}", username);
                 return Result.success(data);
@@ -101,7 +114,7 @@ public class UserController {
                 data.put("email", user.getEmail());
                 data.put("tel", user.getTel());
                 data.put("role", user.getRole());
-                data.put("avatar", user.getAvatar());
+                data.put("avatar", normalizeAvatar(user.getAvatar()));
 
                 return Result.success(data);
             } else {
