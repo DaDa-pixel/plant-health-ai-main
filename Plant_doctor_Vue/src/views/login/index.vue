@@ -145,6 +145,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
         console.log(res);
         if (res.code == 0) {
           Cookies.set('role', res.data.role); //  设置角色
+          Cookies.set('userNickname', res.data.name); //  设置真实姓名
           //登录成功
           onSignIn();
         } else {

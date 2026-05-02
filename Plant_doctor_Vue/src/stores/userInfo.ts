@@ -7,6 +7,7 @@ export const useUserInfo = defineStore('userInfo', {
 	state: (): UserInfosState => ({
 		userInfos: {
 			userName: '',
+			userNickname: '',
 			role: '',
 			photo: '',
 			time: 0,
@@ -17,7 +18,14 @@ export const useUserInfo = defineStore('userInfo', {
 	actions: {
 		async setUserInfos() {
 			if (Session.get('userInfo')) {
-				this.userInfos = Session.get('userInfo');
+				const cached = Session.get('userInfo');
+				// 如果缓存中没有真实姓名，从后端获取
+				if (!cached.userNickname) {
+					const fresh = await this.getApiUserInfo();
+					this.userInfos = fresh;
+				} else {
+					this.userInfos = cached;
+				}
 			} else {
 				const userInfos: any = await this.getApiUserInfo();
 				this.userInfos = userInfos;
@@ -25,6 +33,7 @@ export const useUserInfo = defineStore('userInfo', {
 		},
 		async getApiUserInfo() {
 			const userName = Cookies.get('userName');
+			const userNickname = Cookies.get('userNickname') || userName;
 			const role = Cookies.get('role');
 			
 			let defaultRoles: Array<string> = [];
@@ -45,6 +54,7 @@ export const useUserInfo = defineStore('userInfo', {
 
 			const userInfos = {
 				userName: userName,
+				userNickname: userNickname,
 				role: role,
 				photo: '',
 				time: new Date().getTime(),
@@ -57,9 +67,13 @@ export const useUserInfo = defineStore('userInfo', {
 					const res = await request.get('/api/user/' + userName);
 					if (res.code === 0 && res.data) {
 						userInfos.photo = res.data.avatar || userInfos.photo;
+						// 从后端获取真实姓名（覆盖cookie默认值）
+						if (res.data.name) {
+							userInfos.userNickname = res.data.name;
+						}
 					}
 				} catch (error) {
-					console.error('获取用户头像失败:', error);
+					console.error('获取用户信息失败:', error);
 				}
 			}
 			

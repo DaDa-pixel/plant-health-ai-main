@@ -92,7 +92,7 @@
           <el-table-column prop="conf" label="最小阈值" width="100" align="center" />
           <el-table-column prop="allTime" label="总用时" width="100" align="center" />
           <el-table-column prop="startTime" label="识别时间" width="170" align="center" />
-          <el-table-column prop="username" label="识别用户" width="110" align="center" />
+          <el-table-column v-if="isAdmin" prop="username" label="识别用户" width="110" align="center" />
           <el-table-column label="操作" width="100" align="center" fixed="right">
             <template #default="scope">
               <el-button
@@ -136,6 +136,9 @@ import { storeToRefs } from 'pinia';
 
 const stores = useUserInfo();
 const { userInfos } = storeToRefs(stores);
+
+// 判断是否为管理员
+const isAdmin = computed(() => userInfos.value.userName === 'admin');
 
 // 统计数据
 const imgTotal = ref(0);
@@ -232,7 +235,7 @@ const loadImgRecordsData = async () => {
   };
 
   if (userInfos.value.userName && userInfos.value.userName !== 'admin') {
-    params.search = userInfos.value.userName;
+    params.search = userInfos.value.userNickname || userInfos.value.userName;
   }
 
   if (searchParams.cropType) {
@@ -260,7 +263,7 @@ const loadCameraRecordsData = async () => {
   };
 
   if (userInfos.value.userName && userInfos.value.userName !== 'admin') {
-    params.search = userInfos.value.userName;
+    params.search = userInfos.value.userNickname || userInfos.value.userName;
   }
 
   if (searchParams.cropType) {
@@ -507,5 +510,75 @@ onMounted(() => {
   justify-content: flex-end;
   padding: 16px 20px;
   border-top: 1px solid #ebeef5;
+}
+
+/* ===== 手机端适配（≤768px） ===== */
+@media screen and (max-width: 768px) {
+  .detection-records-container {
+    padding: 12px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stats-cards .stat-card {
+    padding: 14px 18px;
+  }
+
+  .stats-cards .stat-card .stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  .stats-cards .stat-card .stat-content .stat-value {
+    font-size: 22px;
+  }
+
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .search-bar .el-input {
+    max-width: 100% !important;
+  }
+
+  .search-bar .el-select {
+    width: 100% !important;
+  }
+
+  .search-bar .el-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .table-wrapper :deep(.el-table) {
+    min-width: 700px;
+  }
+
+  .pagination-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .pagination-wrapper :deep(.el-pagination) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pagination-wrapper :deep(.el-pagination .el-pagination__total) {
+    margin-right: 0;
+  }
 }
 </style>

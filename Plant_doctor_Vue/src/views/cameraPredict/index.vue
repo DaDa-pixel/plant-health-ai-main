@@ -412,7 +412,7 @@ const predictImage = async (imageBlob) => {
 
   try {
     // 直接调用Flask服务（因为需要上传文件）
-    const response = await fetch('http://localhost:5000/predict', {
+    const response = await fetch('/flask/predict', {
       method: 'POST',
       body: formData
     });
@@ -508,7 +508,7 @@ const sendToDoctor = async () => {
 
     // 降级方案：直接调用Flask
     try {
-      const fallbackResponse = await fetch('http://localhost:5000/chat', {
+      const fallbackResponse = await fetch('/flask/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -573,7 +573,7 @@ const saveCameraRecord = async (predictionData) => {
     const recordData = {
       weight: 'default',
       conf: conf.value ? (conf.value / 100).toFixed(2) : '0.5',
-      username: userInfos.value.userName || 'unknown',
+      username: userInfos.value.userNickname || userInfos.value.userName || 'unknown',
       startTime: timeStr,
       outVideo: '',
       kind: extractCropType(predictionData.disease_name)
@@ -1296,5 +1296,106 @@ onUnmounted(() => {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* ===== 手机端适配（≤768px） ===== */
+@media screen and (max-width: 768px) {
+  .camera-predict-container {
+    height: auto;
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .camera-predict-container .camera-wrapper {
+    flex-direction: column;
+    height: auto;
+    gap: 12px;
+  }
+
+  .camera-section {
+    flex: none;
+    width: 100%;
+    height: auto;
+  }
+
+  .camera-section .camera-card {
+    border-radius: 14px;
+  }
+
+  .camera-section .camera-card :deep(.el-card__body) {
+    padding: 12px;
+  }
+
+  .camera-section .camera-card .camera-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .camera-section .camera-card .camera-header .camera-controls {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .camera-section .camera-card .camera-header .camera-controls .control-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .camera-section .camera-card .video-container {
+    min-height: 240px;
+    max-height: 50vh;
+  }
+
+  .camera-section .camera-card .threshold-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .camera-section .camera-card .threshold-section .el-slider {
+    margin: 0 !important;
+    min-width: 100%;
+    order: 3;
+  }
+
+  .result-section {
+    flex: none;
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .result-section .result-card {
+    margin-bottom: 0;
+  }
+
+  .result-section .progress-panel {
+    padding: 14px;
+  }
+
+  .result-section .progress-panel .progress-panel-inner .progress-header .progress-title {
+    font-size: 14px;
+  }
+
+  .result-section .progress-panel .progress-panel-inner .progress-steps {
+    flex-wrap: wrap;
+  }
+
+  .result-section .progress-panel .progress-panel-inner .progress-steps .step-item {
+    min-width: 45%;
+    flex: none;
+  }
+
+  .result-section .doctor-card {
+    min-height: 300px;
+    max-height: 400px;
+  }
+
+  .result-section .progress-panel .progress-panel-inner .progress-steps .step-item .step-label {
+    font-size: 10px;
+  }
 }
 </style>

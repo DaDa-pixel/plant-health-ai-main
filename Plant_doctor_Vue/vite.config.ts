@@ -33,6 +33,10 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
 					ws: true,
 					changeOrigin: true,
 				},
+				'/files': {
+					target: 'http://localhost:9999/',
+					changeOrigin: true,
+				},
 				'/api': {
 					//设置拦截器  拦截器格式   斜杠+拦截器名字，名字可以自己定
 					target: 'http://localhost:9999/', //代理的目标地址

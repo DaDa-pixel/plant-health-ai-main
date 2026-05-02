@@ -147,7 +147,7 @@ export default {
     // 检查模型状态
     async checkModelStatus() {
       try {
-        const response = await axios.get('http://localhost:5000/health')
+        const response = await axios.get('/flask/health')
         if (response.data) {
           this.isModelAvailable = response.data.llm_available || false
           this.statusText = this.isModelAvailable
@@ -185,7 +185,7 @@ export default {
       this.scrollToBottom()
 
       try {
-        const response = await axios.post('http://localhost:5000/chat', {
+        const response = await axios.post('/flask/chat', {
           message: userMessage,
           disease_context: null // 独立助手模式，不设置病害上下文
         })

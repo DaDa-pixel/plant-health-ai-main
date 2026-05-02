@@ -457,7 +457,7 @@ const sendToDoctor = async () => {
   scrollToBottom();
 
   try {
-    const response = await fetch('http://localhost:5000/chat', {
+    const response = await fetch('/flask/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -578,12 +578,12 @@ const saveImageRecord = async (predictionData: any) => {
 
     const recordData = {
       inputImg: state.img,
-      outImg: predictedImageUrl.value,
+      outImg: '',
       confidence: JSON.stringify([predictionData.confidence || 0]),
       allTime: elapsedTime.value ? elapsedTime.value + 's' : '0s',
       conf: state.form.conf ? state.form.conf.toString() : '0.5',
       weight: 'default',
-      username: userInfos.value.userName || 'unknown',
+      username: userInfos.value.userNickname || userInfos.value.userName || 'unknown',
       startTime: timeStr,
       label: JSON.stringify([predictionData.disease_name]),
       kind: extractCropType(predictionData.disease_name)
@@ -1326,5 +1326,141 @@ onUnmounted(() => {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* ===== 手机端适配（≤768px） ===== */
+@media screen and (max-width: 768px) {
+  .system-predict-container {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .system-predict-container .system-predict-padding {
+    padding: 10px;
+    min-height: auto;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .header .conf {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .header .conf .el-slider {
+    width: 100% !important;
+    margin-top: 8px;
+  }
+
+  .header .button-section {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .header .button-section .predict-button {
+    width: 100%;
+    min-width: unset;
+    padding: 12px 20px;
+  }
+
+  .image-display.el-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .image-display .el-col {
+    width: 100% !important;
+    max-width: 100%;
+    margin-bottom: 12px;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .image-display .card .avatar-uploader {
+    height: 220px;
+  }
+
+  .image-display .card .preview-image {
+    height: 220px;
+  }
+
+  .image-display .card .placeholder {
+    height: 220px;
+  }
+
+  .image-display .card.doctor-card .chat-container {
+    height: 280px;
+  }
+
+  .progress-panel .progress-panel-inner {
+    padding: 16px;
+  }
+
+  .progress-panel .progress-header .header-left .header-info .progress-title {
+    font-size: 16px;
+  }
+
+  .progress-panel .progress-header .progress-time-wrapper .progress-time-value {
+    font-size: 20px;
+  }
+
+  .progress-panel .steps-container .step-item .step-content .step-label {
+    font-size: 13px;
+  }
+
+  .progress-panel .steps-container .step-item .step-content .step-desc {
+    font-size: 11px;
+  }
+
+  .result-section .bottom {
+    padding: 14px;
+  }
+
+  .result-section .bottom .bottom-row {
+    flex-direction: column;
+  }
+
+  .result-section .bottom .bottom-row .bottom-left {
+    flex: none;
+    width: 100%;
+    padding-right: 0;
+    border-right: none;
+    border-bottom: 1px solid #ebeef5;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+  }
+
+  .result-section .bottom .bottom-row .bottom-right {
+    padding-left: 0;
+    width: 100%;
+  }
+
+  .result-section .bottom .bottom-indicators {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .result-section .bottom .bottom-indicators .indicator-divider {
+    display: none;
+  }
+
+  .result-section .bottom .bottom-indicators .indicator-item {
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .result-section .bottom .treatment-content {
+    font-size: 13px;
+  }
 }
 </style>

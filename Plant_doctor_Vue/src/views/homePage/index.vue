@@ -74,7 +74,7 @@
               </div>
               <span>检测记录</span>
             </div>
-            <div class="entry-item" @click="navigateTo('/greenhouse/index')">
+            <div class="entry-item" @click="navigateTo('/infoGreenhouse')">
               <div class="entry-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
                 <el-icon><OfficeBuilding /></el-icon>
               </div>
@@ -108,7 +108,7 @@
                 <el-icon><Grid /></el-icon>
                 <span>温室作物信息</span>
               </div>
-              <el-button type="primary" link @click="navigateTo('/greenhouse/index')">查看全部</el-button>
+              <el-button type="primary" link @click="navigateTo('/infoGreenhouse')">查看全部</el-button>
             </div>
           </template>
           <div class="crop-grid">

@@ -262,8 +262,8 @@ INSERT INTO `greenhouse` VALUES (132, '9号温室', '草莓', 300, '生长中', 
 DROP TABLE IF EXISTS `imgrecords`;
 CREATE TABLE `imgrecords`  (
   `id` int NOT NULL AUTO_INCREMENT,
-  `input_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
-  `out_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `input_img` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `out_img` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `confidence` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `all_time` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `conf` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,

@@ -10,6 +10,7 @@ declare interface UserInfosState<T = any> {
 		roles: string[];
 		time: number;
 		userName: string;
+		userNickname: string;
 		[key: string]: T;
 	};
 }

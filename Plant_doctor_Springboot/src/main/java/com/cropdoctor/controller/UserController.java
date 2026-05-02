@@ -28,6 +28,10 @@ public class UserController {
         if (avatar == null || avatar.isEmpty()) {
             return avatar;
         }
+        // 将硬编码的 localhost URL 转为相对路径，便于反向代理访问
+        if (avatar.startsWith("http://localhost:9999/")) {
+            return avatar.substring(avatar.indexOf("/files"));
+        }
         if (avatar.startsWith("/") || avatar.startsWith("http")) {
             return avatar;
         }
@@ -283,7 +287,7 @@ public class UserController {
                 user.setRole("common");
             }
             if (user.getAvatar() == null || user.getAvatar().isEmpty()) {
-                user.setAvatar("http://localhost:9999/files/15e09359b18544dbb65dc9dadb833abd_人.png");
+                user.setAvatar("/files/15e09359b18544dbb65dc9dadb833abd_人.png");
             }
             user.setTime(LocalDateTime.now());
 

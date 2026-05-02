@@ -45,7 +45,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setRole("common");
         }
         if (user.getAvatar() == null || user.getAvatar().isEmpty()) {
-            user.setAvatar("http://localhost:9999/files/15e09359b18544dbb65dc9dadb833abd_人.png");
+            user.setAvatar("/files/15e09359b18544dbb65dc9dadb833abd_人.png");
         }
         user.setTime(LocalDateTime.now());
 

@@ -43,7 +43,7 @@
     </div>
 
     <!-- 统计信息 -->
-    <div class="stats-bar" v-if="!loading && searchResults.length >= 0">
+    <div class="stats-bar" v-if="searchResults.length > 0">
       <div class="stat-item">
         <el-icon><Document /></el-icon>
         <span>共找到 <strong>{{ totalCount }}</strong> 条结果</span>
@@ -59,14 +59,45 @@
       <el-skeleton :rows="5" animated />
     </div>
 
-    <!-- 空状态 -->
-    <div v-else-if="searchResults.length === 0 && !loading" class="empty-state">
+    <!-- 搜索无结果 -->
+    <div v-else-if="hasSearched && searchResults.length === 0" class="empty-state">
       <el-icon class="empty-icon"><DocumentDelete /></el-icon>
-      <h3>暂无数据</h3>
-      <p>输入关键词搜索病虫害知识，或点击上方快速标签</p>
+      <h3>未找到相关结果</h3>
+      <p>请尝试其他关键词，或点击上方快速标签浏览</p>
     </div>
 
-    <!-- 结果列表 -->
+    <!-- 初始推荐（未搜索时） -->
+    <div v-else-if="!hasSearched" class="recommend-section">
+      <div class="recommend-header">
+        <div class="recommend-title">
+          <el-icon class="fire-icon"><DataAnalysis /></el-icon>
+          <h3>🌱 热门病害推荐</h3>
+        </div>
+        <p class="recommend-desc">点击了解常见病害的症状与防治方法</p>
+      </div>
+      <div class="recommend-cards">
+        <div
+          v-for="(item, index) in recommendList"
+          :key="index"
+          class="recommend-card"
+          @click="showDetail(item)"
+          :style="{ '--card-delay': index * 0.1 + 's' }"
+        >
+          <div class="card-badge">{{ index + 1 }}</div>
+          <div class="card-icon-wrapper">
+            <el-icon class="card-icon" :class="iconClass(index)"><Warning /></el-icon>
+          </div>
+          <h4 class="card-name">{{ item.disease_name }}</h4>
+          <p class="card-preview">{{ truncateText(item.symptoms, 40) }}</p>
+          <div class="card-footer">
+            <span class="card-tag" v-if="item.crop_type">{{ item.crop_type }}</span>
+            <el-icon class="card-arrow"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 搜索结果 -->
     <div v-else class="results-container">
       <transition-group name="fade" tag="div" class="cards-grid">
         <div
@@ -160,7 +191,7 @@
 </template>
 
 <script setup lang="ts" name="infoDisease">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   Reading,
@@ -170,7 +201,9 @@ import {
   Warning,
   View,
   QuestionFilled,
-  CircleCheck
+  CircleCheck,
+  DataAnalysis,
+  ArrowRight
 } from '@element-plus/icons-vue';
 import request from '/@/utils/request';
 
@@ -179,6 +212,7 @@ interface DiseaseInfo {
   symptoms: string;
   cause: string;
   treatment: string;
+  crop_type?: string;
 }
 
 const searchKeyword = ref('');
@@ -186,10 +220,45 @@ const loading = ref(false);
 const searchResults = ref<DiseaseInfo[]>([]);
 const detailVisible = ref(false);
 const currentDetail = ref<DiseaseInfo | null>(null);
+const hasSearched = ref(false);
+const recommendList = ref<DiseaseInfo[]>([]);
 
 const quickTags = ['番茄', '玉米', '水稻', '小麦', '白粉病', '锈病', '蚜虫'];
 
 const totalCount = computed(() => searchResults.value.length);
+
+// 热门推荐图标样式轮换
+const iconClass = (index: number) => {
+  const classes = ['icon-red', 'icon-orange', 'icon-blue', 'icon-green', 'icon-purple', 'icon-teal'];
+  return classes[index % classes.length];
+};
+
+// 加载推荐数据
+const loadRecommendations = async () => {
+  try {
+    // 用多个热门关键词搜索，合并结果作为推荐
+    const keywords = ['番茄', '玉米', '水稻', '小麦'];
+    const allResults: DiseaseInfo[] = [];
+    const seen = new Set<string>();
+
+    for (const keyword of keywords) {
+      const res = await request.post('/api/flask/knowledge/search', { keyword });
+      if (res.code === 0 && res.data.success && res.data.results) {
+        for (const item of res.data.results) {
+          if (!seen.has(item.disease_name)) {
+            seen.add(item.disease_name);
+            allResults.push(item);
+          }
+        }
+      }
+    }
+
+    recommendList.value = allResults.slice(0, 6);
+  } catch (error) {
+    console.warn('加载推荐数据失败:', error);
+    recommendList.value = [];
+  }
+};
 
 // 搜索处理
 const handleSearch = async () => {
@@ -198,6 +267,7 @@ const handleSearch = async () => {
     return;
   }
 
+  hasSearched.value = true;
   loading.value = true;
 
   try {
@@ -242,6 +312,11 @@ const truncateText = (text: string, maxLength: number) => {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 };
+
+// 页面加载时自动获取推荐数据
+onMounted(() => {
+  loadRecommendations();
+});
 </script>
 
 <style scoped lang="scss">
@@ -379,6 +454,175 @@ const truncateText = (text: string, maxLength: number) => {
   p {
     margin: 0;
     font-size: 14px;
+  }
+}
+
+// 推荐区域
+.recommend-section {
+  padding: 30px;
+  flex: 1;
+
+  .recommend-header {
+    text-align: center;
+    margin-bottom: 28px;
+
+    .recommend-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      .fire-icon {
+        font-size: 28px;
+        color: #f56c6c;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 22px;
+        color: #303133;
+        font-weight: 600;
+      }
+    }
+
+    .recommend-desc {
+      margin: 0;
+      font-size: 14px;
+      color: #909399;
+    }
+  }
+
+  .recommend-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .recommend-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 20px 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    animation: cardFadeIn 0.6s ease both;
+    animation-delay: var(--card-delay, 0s);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    &:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.18);
+      border-color: #667eea;
+
+      &::before {
+        opacity: 1;
+      }
+
+      .card-arrow {
+        transform: translateX(4px);
+        opacity: 1;
+      }
+    }
+
+    .card-badge {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #c0c4cc;
+      opacity: 0.4;
+    }
+
+    .card-icon-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 14px;
+
+      .card-icon {
+        font-size: 36px;
+        padding: 12px;
+        border-radius: 14px;
+
+        &.icon-red { color: #f56c6c; background: #fef0f0; }
+        &.icon-orange { color: #e6a23c; background: #fdf6ec; }
+        &.icon-blue { color: #409eff; background: #ecf5ff; }
+        &.icon-green { color: #67c23a; background: #f0f9eb; }
+        &.icon-purple { color: #9b59b6; background: #f3eaf9; }
+        &.icon-teal { color: #00bcd4; background: #e0f7fa; }
+      }
+    }
+
+    .card-name {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      text-align: center;
+    }
+
+    .card-preview {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      color: #909399;
+      line-height: 1.5;
+      text-align: center;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      .card-tag {
+        font-size: 12px;
+        padding: 2px 10px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 20px;
+        font-weight: 500;
+      }
+
+      .card-arrow {
+        font-size: 16px;
+        color: #667eea;
+        opacity: 0.5;
+        transition: all 0.3s ease;
+      }
+    }
+  }
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -556,5 +800,100 @@ const truncateText = (text: string, maxLength: number) => {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-20px);
+}
+
+/* ===== 手机端适配（≤768px） ===== */
+@media screen and (max-width: 768px) {
+  .knowledge-base-container {
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .search-header {
+    padding: 24px 16px;
+  }
+
+  .search-header .header-content .title-section {
+    margin-bottom: 20px;
+  }
+
+  .search-header .header-content .title-section h2 {
+    font-size: 20px;
+  }
+
+  .search-header .header-content .title-section .subtitle {
+    font-size: 12px;
+  }
+
+  .search-header .header-content .search-section .search-input :deep(.el-input__wrapper) {
+    border-radius: 8px;
+  }
+
+  .search-header .header-content .search-section .quick-tags {
+    gap: 6px;
+  }
+
+  .stats-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .recommend-section {
+    padding: 16px;
+  }
+
+  .recommend-section .recommend-header .recommend-title h3 {
+    font-size: 18px;
+  }
+
+  .recommend-section .recommend-cards {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .recommend-section .recommend-card {
+    padding: 18px 16px 16px;
+  }
+
+  .results-container {
+    padding: 16px;
+  }
+
+  .results-container .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .disease-card {
+    padding: 16px;
+  }
+
+  .disease-card .card-header .disease-name h3 {
+    font-size: 15px;
+  }
+
+  .detail-dialog {
+    width: 92% !important;
+    max-width: 92% !important;
+  }
+
+  .detail-dialog :deep(.el-dialog__body) {
+    padding: 16px;
+    max-height: 55vh;
+  }
+
+  .detail-dialog .dialog-header {
+    font-size: 16px;
+  }
+
+  .detail-dialog .detail-content .detail-section .section-header h4 {
+    font-size: 14px;
+  }
+
+  .detail-dialog .detail-content .detail-section .section-body {
+    font-size: 13px;
+    padding: 10px;
+  }
 }
 </style>
