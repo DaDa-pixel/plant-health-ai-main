@@ -159,32 +159,45 @@
         <el-col :span="24">
           <el-card>
             <div class="bottom" v-if="state.predictionResult.label">
-              <div class="result-column narrow">
-                <div class="result-title">🔍 识别结果</div>
-                <div class="result-item">
-                  <span class="result-value disease-name">{{ state.predictionResult.label }}</span>
+              <div class="bottom-row">
+                <!-- 左侧：识别结果 + 症状/病因 -->
+                <div class="bottom-left">
+                  <!-- 紧凑的指标行 -->
+                  <div class="bottom-indicators">
+                    <div class="indicator-item">
+                      <div class="indicator-label">🔍 识别结果</div>
+                      <div class="indicator-value disease-name">{{ state.predictionResult.label }}</div>
+                    </div>
+                    <div class="indicator-divider"></div>
+                    <div class="indicator-item">
+                      <div class="indicator-label">📊 预测概率</div>
+                      <div class="indicator-value probability" :style="{ color: getConfidenceColor(state.predictionResult.confidenceValue) }">
+                        {{ state.predictionResult.confidence }}
+                      </div>
+                    </div>
+                    <div class="indicator-divider"></div>
+                    <div class="indicator-item">
+                      <div class="indicator-label">✅ 可靠性</div>
+                      <div class="indicator-value">
+                        <el-tag :type="isReliable ? 'success' : 'warning'" size="small" effect="dark">
+                          {{ isReliable ? '可靠' : '较低' }}
+                        </el-tag>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 症状和病因 -->
+                  <div class="symptoms-section">
+                    <div class="symptoms-title">🌱 症状 &amp; 发病原因</div>
+                    <div class="symptoms-content" v-html="symptomsHtml"></div>
+                  </div>
                 </div>
-              </div>
-              <div class="result-column narrow">
-                <div class="result-title">📊 预测概率</div>
-                <div class="result-item">
-                  <span class="result-value confidence-value" :style="{ color: getConfidenceColor(state.predictionResult.confidenceValue) }">
-                    {{ state.predictionResult.confidence }}
-                  </span>
-                </div>
-              </div>
-              <div class="result-column narrow">
-                <div class="result-title">✅ 可靠性</div>
-                <div class="result-item">
-                  <el-tag :type="isReliable ? 'success' : 'warning'" size="default" effect="dark">
-                    {{ isReliable ? '可靠' : '较低' }}
-                  </el-tag>
-                </div>
-              </div>
-              <div class="result-column wide">
-                <div class="result-title">📚 知识库建议</div>
-                <div class="result-item advice-wrapper">
-                  <div class="advice-content" v-html="formatAdvice(state.knowledgeAdvice)"></div>
+                <!-- 右侧：知识库建议（防治建议） -->
+                <div class="bottom-right">
+                  <div class="result-title">
+                    📚 知识库建议
+                    <span class="source-tag" v-if="knowledgeSource">📖 {{ knowledgeSource }}</span>
+                  </div>
+                  <div class="treatment-content" v-html="treatmentHtml"></div>
                 </div>
               </div>
             </div>
@@ -496,6 +509,51 @@ const formatAdvice = (advice: string) => {
       .replace(/💡/g, '<span class="emoji">💡</span>')
       .replace(/📚/g, '<span class="emoji">📚</span>');
 };
+
+// 将知识库建议拆分为"症状/病因"和"防治建议"两部分
+const splitAdvice = (advice: string) => {
+  if (!advice) return { symptoms: '', treatment: '' };
+  const lines = advice.split('\n');
+  const symptomsLines: string[] = [];
+  const treatmentLines: string[] = [];
+  let currentSection: 'symptoms' | 'treatment' | null = null;
+  for (const line of lines) {
+    // 先检查防治/建议类（🧑‍🌾 包含 🌾，必须优先匹配）
+    if (line.includes('🧑') || line.includes('💊') || line.includes('💡') || line.includes('📚') || line.includes('防治') || line.includes('小贴士')) {
+      currentSection = 'treatment';
+      treatmentLines.push(line);
+    } else if (line.includes('🌱') || line.includes('🌾') || line.includes('症状') || line.includes('病因') || line.includes('发病规律')) {
+      currentSection = 'symptoms';
+      symptomsLines.push(line);
+    } else if (currentSection === 'symptoms') {
+      symptomsLines.push(line);
+    } else if (currentSection === 'treatment') {
+      treatmentLines.push(line);
+    }
+  }
+  return {
+    symptoms: symptomsLines.join('\n'),
+    treatment: treatmentLines.join('\n')
+  };
+};
+
+const symptomsHtml = computed(() => {
+  const parts = splitAdvice(state.knowledgeAdvice);
+  return formatAdvice(parts.symptoms);
+});
+
+const treatmentHtml = computed(() => {
+  const parts = splitAdvice(state.knowledgeAdvice);
+  return formatAdvice(parts.treatment);
+});
+
+// 从 advice 文本中提取来源信息
+const knowledgeSource = computed(() => {
+  if (!state.knowledgeAdvice) return '';
+  const firstLine = state.knowledgeAdvice.split('\n')[0];
+  const match = firstLine.match(/（来源：([^）]+)）/);
+  return match ? match[1] : '';
+});
 
 const getConfidenceColor = (value: number) => {
   if (value >= 0.8) return '#67C23A';
@@ -1047,112 +1105,145 @@ onUnmounted(() => {
   }
 
   .bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     padding: 20px;
     background: white;
     border-radius: 12px;
     min-height: 140px;
 
-    .result-column {
-      padding: 0 15px;
-      border-right: 1px solid #ebeef5;
+    .bottom-row {
+      display: flex;
+      gap: 0;
 
-      &:last-child {
-        border-right: none;
-      }
-
-      &.narrow {
-        width: 15%;
-        min-width: 120px;
-      }
-
-      &.wide {
-        width: 55%;
-        flex: 1;
-      }
-
-      .result-title {
-        font-size: 14px;
-        color: #606266;
-        font-weight: 600;
-        margin-bottom: 12px;
+      .bottom-left {
+        flex: 0 0 44%;
         display: flex;
-        align-items: center;
-        gap: 6px;
+        flex-direction: column;
+        padding-right: 20px;
+        border-right: 1px solid #ebeef5;
       }
 
-      .result-item {
-        margin: 5px 0;
+      .bottom-right {
+        flex: 1;
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+      }
+    }
 
-        .result-value {
-          color: #409EFF;
+    .bottom-indicators {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e8f5e9 100%);
+      border-radius: 12px;
+      margin-bottom: 16px;
+
+      .indicator-item {
+        flex: 1;
+        text-align: center;
+
+        .indicator-label {
+          font-size: 13px;
+          color: #909399;
+          margin-bottom: 6px;
           font-weight: 500;
+        }
+
+        .indicator-value {
+          font-weight: 600;
 
           &.disease-name {
-            font-size: 18px;
+            font-size: 16px;
             color: #303133;
-            font-weight: 600;
           }
 
-          &.confidence-value {
-            font-size: 20px;
+          &.probability {
+            font-size: 18px;
             font-weight: 700;
           }
         }
+      }
 
-        .advice-wrapper {
-          width: 100%;
+      .indicator-divider {
+        width: 1px;
+        height: 36px;
+        background: #dcdfe6;
+        flex-shrink: 0;
+      }
+    }
+
+    .symptoms-section {
+      flex: 1;
+
+      .symptoms-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #303133;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed #ebeef5;
+      }
+
+      .symptoms-content {
+        font-size: 14px;
+        line-height: 1.9;
+        color: #5a5a5a;
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-word;
+
+        :deep(.emoji) {
+          font-size: 16px;
+          margin-right: 4px;
         }
+      }
+    }
 
-        .advice-content {
-          max-height: 200px;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding-right: 10px;
-          font-size: 13px;
-          color: #606266;
-          line-height: 1.8;
-          white-space: normal;
-          word-wrap: break-word;
-          word-break: break-word;
+    .result-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #ebeef5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
 
-          &::-webkit-scrollbar {
-            width: 6px;
-          }
+      .source-tag {
+        font-size: 11px;
+        font-weight: 500;
+        color: #909399;
+        background: linear-gradient(135deg, #f5f7fa, #eef1f6);
+        padding: 2px 10px;
+        border-radius: 20px;
+        margin-left: 4px;
+        letter-spacing: 0.5px;
+        border: 1px solid #e4e7ed;
+        white-space: nowrap;
+      }
+    }
 
-          &::-webkit-scrollbar-track {
-            background: #f5f7fa;
-            border-radius: 3px;
-          }
+    .treatment-content {
+      font-size: 14px;
+      line-height: 1.9;
+      color: #5a5a5a;
+      white-space: normal;
+      word-wrap: break-word;
+      word-break: break-word;
 
-          &::-webkit-scrollbar-thumb {
-            background-color: #c0c4cc;
-            border-radius: 3px;
-
-            &:hover {
-              background-color: #909399;
-            }
-          }
-
-          .emoji {
-            font-size: 16px;
-            margin-right: 4px;
-          }
-
-          strong {
-            color: #409EFF;
-            font-weight: 600;
-          }
-        }
+      :deep(.emoji) {
+        font-size: 16px;
+        margin-right: 4px;
       }
     }
 
     &.placeholder {
       color: #909399;
+      display: flex;
       justify-content: center;
       align-items: center;
+      min-height: 80px;
 
       .el-icon {
         margin-right: 8px;

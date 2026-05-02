@@ -74,8 +74,14 @@ public class FlaskAiClient {
             String inputImg = (String) params.get("inputImg");
             if (inputImg != null && !inputImg.isEmpty()) {
                 // 从uploads目录读取文件
-                String uploadDir = System.getProperty("user.dir") + "/uploads/";
-                File imageFile = new File(uploadDir + inputImg);
+                String uploadDir = System.getProperty("user.dir") + "/uploads";
+                // 移除 inputImg 开头的 /uploads/ 前缀，避免路径重复
+                if (inputImg.startsWith("/uploads/")) {
+                    inputImg = inputImg.substring("/uploads/".length());
+                } else if (inputImg.startsWith("uploads/")) {
+                    inputImg = inputImg.substring("uploads/".length());
+                }
+                File imageFile = new File(uploadDir + "/" + inputImg);
                 
                 if (imageFile.exists()) {
                     body.add("image", new FileSystemResource(imageFile));
